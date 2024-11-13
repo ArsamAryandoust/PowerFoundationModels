@@ -17,9 +17,12 @@ datasets python package.
 pip install datasets
 ```
 
-Load a dataset with
+For example, load the "OPFData" dataset with:
 ```Python
 from datasets import load_dataset
 
-dataset = load_dataset("ArsamAryandoust/OPFData")
+dataset = load_dataset("AI4Climate/OPFData")
 ```
+
+Available datasets are:
+- OPFData
