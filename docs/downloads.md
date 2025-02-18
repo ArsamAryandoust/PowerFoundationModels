@@ -5,7 +5,7 @@ Here, we document instructions for downloading the raw datasets in AI4Climate.
 
 ## OPFData
 
-You can download the raw OPFData datasets from pytorch geometric.
+You can download the raw OPFData datasets using pytorch geometric.
 
 ```python
 !pip install pyg-nightly # Only necessary until PyG 2.6.0 is released.
