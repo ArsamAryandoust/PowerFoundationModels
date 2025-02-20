@@ -44,9 +44,10 @@ for entry in $(ls "$PATH_DATA")
 do
     PATH_DATA_GROUP="${PATH_DATA}/${entry}"
     PATH_FILENAME="${PATH_DATA_GROUP}.tar.gz"
-    tar -czvf "$PATH_FILENAME" "$PATH_DATA_GROUP"
+    tar -czvf "$PATH_FILENAME" "$PATH_DATA_GROUP" &
 done 
 
+# Wait until all parallel background processes complete
+wait
 
-
-#tar -czvf dataset_release_1/pglib_opf_case6470_rte.tar.gz dataset_release_1/pglib_opf_case6470_rte/
+echo "Compression script ran successfully!"
