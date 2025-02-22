@@ -1,44 +1,35 @@
-# Raw data downloads
+# Downloads
 
-Here, we document instructions for downloading the raw datasets in AI4Climate.
+We host both the raw and processed datasets of the AI4Climate collection on
+Hugging Face Hub. Users can download both of these using either Hugging Face's
+python package called `datasets` or by directly accessing the dataset files via 
+a URL.
 
+## Using the Hugging Face `datasets` Library
 
-## OPFData
-
-You can download the raw OPFData datasets using pytorch geometric.
-
-```python
-!pip install pyg-nightly # Only necessary until PyG 2.6.0 is released.
-
-from torch_geometric.datasets import OPFDataset
-
-# set directory in which you want to download and extract dataset
-root = "YOUR_ROOT_DIRECTORY"
-
-# set name of grid topology dataset
-case_name = "GRID_TOPOLOGY_NAME" # e.g. pglib_opf_case14_ieee
-
-# choose if you want dataset with n-1 topological perturbations or not.
-perturbation = True # set True or False
-
-OPFDataset(
-    root=root,
-    case_name=case_name,
-    topological_perturbations=perturbation
-)
+To load the datasets with Python first install the `datasets`package:
+```bash
+pip install datasets
 ```
 
-The full list of available case names is:
-- `pglib_opf_case14_ieee`
-- `pglib_opf_case30_ieee`
-- `pglib_opf_case57_ieee`
-- `pglib_opf_case118_ieee`
-- `pglib_opf_case500_goc`
-- `pglib_opf_case2000_goc`
-- `pglib_opf_case4661_sdet`
-- `pglib_opf_case6470_rte`
-- `pglib_opf_case10000_goc`
-- `pglib_opf_case13659_pegase`
+Then, use the following code snippets in your Python script or interactive 
+environment to load <dataset_name> or <dataset_name_raw>:
+```Python
+from datasets import load_dataset
 
-Each of these cases can be downloaded with perturbation once set to True and once set to False.
+dataset_x = load_dataset("AI4Climate/<dataset_name>")
+dataset_x_raw = load_dataset("AI4Climate/<dataset_name_raw>")
+```
 
+## Using Direct Download via URL
+
+Download <sample_data_file.zip> from <dataset_name> as <dataset_name_filename>
+using `wget`:
+```bash
+wget https://huggingface.co/AI4Climate/<dataset_name>/tree/main/<sample_data_file.zip> -O <dataset_name_filename>.zip
+```
+
+or `curl`:
+```bash
+curl -L https://huggingface.co/AI4Climate/<dataset_name>/tree/main/<sample_data_file.zip> -O <dataset_name_filename>.zip
+```
