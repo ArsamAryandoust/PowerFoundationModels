@@ -5,7 +5,6 @@
 
 1. [Getting started](#getting-started)
 2. [Available datasets](#list-of-available-datasets)
-2. [Downloads](docs/downloads.md)
 3. [Contributions](docs/contributions.md)
 
 
@@ -13,8 +12,7 @@
 
 All datasets are provided on Hugging Face Hub and ready to be downloaded and 
 parsed into our standardized data format with training, validation and testing 
-splits using our `ai4climate` Python package. To get started, install the
-ai4climate Python package, if you have not already:
+splits using our `ai4climate` Python package. Install package:
 
 ```bash
 pip install ai4climate

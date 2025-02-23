@@ -1,50 +1,61 @@
 # Downloads
 
 We host both the raw and processed datasets of the AI4Climate collection on
-Hugging Face Hub. Users can download both of these using either Hugging Face's
-python package called `datasets` or Git's large file system (LFS) hierarchy.
+Hugging Face Hub. Users can progamatically download both of these using one of
+the following methods
 
 
-## Using the Hugging Face `datasets` Library
 
-To load the datasets with Python first install the `datasets`package:
+## Using Git LFS
+
+Download <dataset_name>:
 ```bash
-pip install datasets
+git lfs install
+git clone git@hf.co:datasets/AI4Climate/<dataset_name>
+```
+
+For example:
+```bash
+git clone git@hf.co:datasets/AI4Climate/OPFData
+```
+
+
+## Using `huggingface-cli` library
+
+Download <dataset_name>:
+```bash
+huggingface-cli download AI4Climate/<dataset_name> --repo-type dataset
+```
+
+
+## Using `huggingface_hub` library
+
+To load the datasets with Python first install the `huggingface_hub`package:
+```bash
+pip install huggingface_hub
 ```
 
 Then, use the following code snippets in your Python script or interactive 
 environment to load <dataset_name> or <dataset_name_raw>:
 ```Python
-from datasets import load_dataset
+from huggingface_hub import snapshot_download
 
-dataset_x = load_dataset("AI4Climate/<dataset_name>")
-dataset_x_raw = load_dataset("AI4Climate/<dataset_name_raw>")
-```
-
-For example, download procesed and raw "OPFData" dataset files with
-```Python
-from datasets import load_dataset
-
-dataset_opfdata = load_dataset("AI4Climate/OPFData")
-dataset_opfdata_raw = load_dataset("AI4Climate/OPFData_raw")
-```
-
-
-## Using Git LFS
-
-First initialize Git LFS:
-```bash
-git lfs install
-```
-
-Then, use 
-```bash
-git clone git@hf.co:datasets/<path_to_dataset_ID>
+snapshot_download(repo_id="AI4Climate/<dataset_name>")
+snapshot_download(repo_id="AI4Climate/<dataset_name_raw>")
 ```
 
 For example, download procesed and raw "OPFData" dataset files with:
+```Python
+from huggingface_hub import snapshot_download
+
+snapshot_download(repo_id="AI4Climate/OPFData", repo_type="dataset")
+snapshot_download(repo_id="AI4Climate/OPFData_raw")
+```
+
+## Using `wget` and `curl`
+
+Download file stored under <path_to_file> from <dataset_name>:
 ```bash
-git clone git@hf.co:datasets/AI4Climate/OPFData
-git clone git@hf.co:datasets/AI4Climate/OPFData_raw
+wget https://huggingface.co/datasets/AI4Climate/<dataset_name>/resolve/main/<path_to_file>
 ```
 
