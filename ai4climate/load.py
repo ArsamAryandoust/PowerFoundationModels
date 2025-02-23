@@ -1,17 +1,6 @@
-"""Load requested task from AI4Climate Hugging Face Hub repository.
-
-This is the main API to the library.
-
-Example use:
-
-from ai4climate import load
-train, valid, test = load.load_task(
-    'OPFData',
-    'train_small_test_medium'
-)
-
-"""
+"""Load requested task from AI4Climate Hugging Face Hub repository."""
 import os
+import sys
 
 def load_task(
     task_name: str,
@@ -19,16 +8,16 @@ def load_task(
     root_path: str = None
 ):
     """ """
-    print(f"Loading {subtask_name} from {task_name}")
+    print(f"Loading '{subtask_name}' from '{task_name}'...")
 
-    # set home directory for root named 'AI4Climate'
+    # If no root_path is given, default to ~/AI4Climate
     if root_path is None:
-        root_path = '~/AI4Climate'
+        root_path = os.path.expanduser('~/AI4Climate')
 
-    # set path to dataset
+    # Full local path for the dataset
     task_path = os.path.join(root_path, task_name)
 
-    # download dataset
+    # Download the repository to the local path
     _download_data(task_name, task_path)
 
 
@@ -37,15 +26,19 @@ def _download_data(
     task_path: str
 ):
     """Download task repository containing required data and testbeds."""
+    # Construct the Hugging Face repository ID
+    repo_id = f'AI4Climate/{task_name}'
 
-    # set reposiory ID
-    base_repo = 'AI4Climate'
-    repo_id = os.path.join(base_repo, task_name)
+    # Create local directory if it doesn't exist
+    os.makedirs(task_path, exist_ok=True)
 
-    # create directory if not existent already.
-    if not os.isdir(task_path):
-        os.mkdir(task_path)
+    # Download entire repository snapshot from Hugging Face
+    snapshot_download(
+        repo_id=repo_id,
+        repo_type="dataset",
+        local_dir=task_path,
+    )
 
-    # download entire repository
-    snapshot_download(repo_id=repo_id, repo_type="dataset", local_dir=task_path)
+    print(f"Task '{task_name}' data successfully downloaded to '{task_path}'.")
+
 
