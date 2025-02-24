@@ -255,7 +255,7 @@ def _parse_and_aggregate_datapoint(
     
     # set edge index as concatenation of ij and ijR_e for undirected graph.
     edge_index = torch.from_numpy(np.concatenate((ij_e, ijR_e))).long()
-
+    
     # return a dictionary containing all parsed components of a datapoint
     return {
         "x_node": x_node, 
