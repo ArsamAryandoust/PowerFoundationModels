@@ -15,6 +15,10 @@ root_path = "../../donti_group_shared/AI4Climate/tests"
     train_frac = 0.1
 )
 
+# show us format
 print(train_data)
 print(val_data)
 print(test_data)
+
+
+print("Successfully executed 'test_opfdata.py'!")

@@ -138,7 +138,8 @@ def _download_hf_repo(
 
 
 def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list):
-    """Recursively gather file paths from the Hugging Face API 
+    """
+    Recursively gather file paths from the Hugging Face API 
     and append them as (file_url, local_entry_path) tuples to files_list.
     """
     api_url = f"https://huggingface.co/api/datasets/{repo_id}/tree/main"
@@ -187,7 +188,7 @@ def _download_single_file(url: str, local_path: str):
             # Also remove leftover compressed file if it somehow exists.
             if os.path.exists(local_path):
                 os.remove(local_path)
-            print(f"[SKIP] '{base_folder}' is already uncompressed; removing leftover compressed file if any.")
+            print(f"[SKIP] '{base_folder}' is already uncompressed.")
             return
 
     # If we reach here, we proceed with download
@@ -208,9 +209,9 @@ def _uncompress_and_delete_file(file_path: str):
     parent_dir = os.path.dirname(file_path)
     base_folder = _guess_uncompressed_dir(file_path)
 
-    # If we already have the uncompressed data, skip decompress, but remove the compressed file.
+    # If we already have the uncompressed data, skip decompress, but remove.
     if base_folder and os.path.isdir(base_folder):
-        print(f"[SKIP] Already uncompressed: {base_folder} exists. Removing {file_path}.")
+        print(f"[SKIP] already decompressed: {base_folder}. Remove {file_path}.")
         os.remove(file_path)
         return
 
