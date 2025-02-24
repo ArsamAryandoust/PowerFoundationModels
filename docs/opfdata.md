@@ -1,36 +1,5 @@
 # OPFData
 
-
-
-## ai4climate loading tests
-
-```python
-from ai4climate import load_dataset
-
-(
-    train,
-    valid,
-    test
-) = load_dataset('OPFData', 'train_small_test_medium')
-```
-
-
-
-## Hugging Face download tests
-
-```python
-from datasets import load_dataset
-
-dataset_opfdata = load_dataset("AI4Climate/OPFData")
-dataset_opfdata_raw = load_dataset("AI4Climate/OPFData_raw")
-```
-
-```bash
-git lfs install
-git clone git@hf.co:datasets/AI4Climate/OPFData
-git clone git@hf.co:datasets/AI4Climate/OPFData_raw
-```
-
 ## Raw data download
 
 You can download the raw OPFData datasets using Pytorch Geometric.
