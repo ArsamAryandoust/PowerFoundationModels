@@ -1,4 +1,3 @@
-"""Load requested task from AI4Climate Hugging Face Hub repository."""
 import os
 import requests
 import subprocess
@@ -8,23 +7,37 @@ def load_task(
     task_name: str,
     subtask_name: str,
     root_path: str = None,
-    max_workers: int = 4
+    max_workers_download: int = 4,
+    max_workers_load: int = 4
 ):
-    """
-    Load a subtask's data from a Hugging Face dataset (AI4Climate/<task_name>)
-    and download all files in parallel using up to `max_workers` threads.
-    """
+    """Download task repository and load standardized subtask."""
     print(f"Loading '{subtask_name}' from '{task_name}'...")
 
     # If no root_path is given, default to ~/AI4Climate
     if root_path is None:
         root_path = os.path.expanduser('~/AI4Climate')
 
-    # Full local path for the dataset
-    local_dir = os.path.join(root_path, task_name)
-    os.makedirs(local_dir, exist_ok=True)  # Ensure base directory exists
+    # download task repository
+    _download_hf_repo(root_path, task_name, max_workers_download, 
+        max_workers_load)
 
-    # Construct the Hugging Face repository ID
+    # load subtask (replace with your actual logic)
+    train_data, val_data, test_data = _load_subtask(root_path, task_name, 
+        subtask_name)
+    
+    return train_data, val_data, test_data
+
+
+def _load_subtask(root_path: str, task_name: str, subtask_name: str):
+    """This is a placeholder for subtask loading logic."""
+    return 0, 0, 0
+
+
+def _download_hf_repo(root_path: str, task_name: str, max_workers_download: int, 
+    max_workers_load: int):
+    """Download and uncompress all files from the Hugging Face in parallel."""
+
+    local_dir = os.path.join(root_path, task_name)
     repo_id = f'AI4Climate/{task_name}'
 
     # Step 1: Collect all files (recursively)
@@ -33,7 +46,7 @@ def load_task(
 
     # Step 2: Download them in parallel
     print(f"\nFound {len(files_to_download)} files to download.")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_download) as executor:
         future_to_file = {
             executor.submit(_download_single_file, url, local_path): (url, local_path)
             for (url, local_path) in files_to_download
@@ -47,14 +60,34 @@ def load_task(
 
     print(f"Data for {repo_id} successfully downloaded to {local_dir}.\n")
 
+    # Step 3: Uncompress files and delete compressed files in parallel
+    # Detect compressed files from the downloaded list
+    compressed_exts = (".zip", ".tar.gz", ".tar")
+    compressed_files = [local_path for (_, local_path) in files_to_download 
+                        if local_path.endswith(compressed_exts)]
+
+    if compressed_files:
+        print(f"Uncompressing {len(compressed_files)} files in parallel...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_load) as executor:
+            future_to_compressed = {
+                executor.submit(_uncompress_and_delete_file, path): path 
+                for path in compressed_files
+            }
+            for future in concurrent.futures.as_completed(future_to_compressed):
+                path = future_to_compressed[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Uncompress & delete failed for {path}: {e}")
+        
+        print("All compressed files have been uncompressed (and deleted).")
 
 
-def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list):
-    """
-    Recursively gather file paths from the Hugging Face API and append them
+def _collect_files(repo_id: str, local_dir: str, subpath: str, 
+    files_list: list):
+    """Recursively gather file paths from the Hugging Face API and append them
     as (file_url, local_entry_path) tuples to files_list.
     """
-    # Construct the API endpoint
     api_url = f"https://huggingface.co/api/datasets/{repo_id}/tree/main"
     if subpath:
         api_url += f"/{subpath}"
@@ -74,20 +107,38 @@ def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list)
         local_entry_path = os.path.join(local_dir, entry_path)
 
         if entry_type == 'file':
-            # Build file URL
             file_url = f"https://huggingface.co/datasets/{repo_id}/resolve/main/{entry_path}"
             files_list.append((file_url, local_entry_path))
 
         elif entry_type == 'directory':
-            # Recursive call to process subdirectories
-            _collect_files(repo_id, local_dir, subpath=entry_path, files_list=files_list)
+            _collect_files(repo_id, local_dir, subpath=entry_path, 
+                files_list=files_list)
 
 
 def _download_single_file(url: str, local_path: str):
     """Download a single file via wget subprocess call."""
-    
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    
     print(f"Downloading {url} -> {local_path}")
-    
     subprocess.run(["wget", "-q", "-O", local_path, url], check=True)
+
+
+def _uncompress_and_delete_file(file_path: str):
+    """Decompress a file (zip/tar/tar.gz) into its directory, then delete the 
+    original. Adjust or extend as needed for other compression formats.
+    """
+    # Choose the right tool/command based on file extension
+    if file_path.endswith(".zip"):
+        cmd = ["unzip", "-o", file_path, "-d", os.path.dirname(file_path)]
+    elif file_path.endswith(".tar.gz"):
+        cmd = ["tar", "-xzf", file_path, "-C", os.path.dirname(file_path)]
+    elif file_path.endswith(".tar"):
+        cmd = ["tar", "-xf", file_path, "-C", os.path.dirname(file_path)]
+    else:
+        print(f"Skipping unrecognized file format: {file_path}")
+        return
+
+    print(f"Uncompressing {file_path}...")
+    subprocess.run(cmd, check=True)
+
+    print(f"Deleting {file_path}...")
+    os.remove(file_path)
