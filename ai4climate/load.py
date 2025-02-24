@@ -3,41 +3,85 @@ import requests
 import subprocess
 import concurrent.futures
 
+# individual task loading modules
+import opfdata
+
 def load_task(
     task_name: str,
     subtask_name: str,
     root_path: str = None,
+    data_frac: int = 1,
+    max_workers: int = 1024,
     max_workers_download: int = 4,
-    max_workers_load: int = 4
 ):
     """Download task repository and load standardized subtask."""
-    print(f"Loading '{subtask_name}' from '{task_name}'...")
+    print(f"Processing '{subtask_name}' for '{task_name}'...")
 
     # If no root_path is given, default to ~/AI4Climate
     if root_path is None:
         root_path = os.path.expanduser('~/AI4Climate')
 
+    # set path to local directory
+    local_dir = os.path.join(root_path, task_name)
+
     # download task repository
-    _download_hf_repo(root_path, task_name, max_workers_download, 
-        max_workers_load)
+    _download_hf_repo(
+        local_dir, 
+        task_name,
+        max_workers,
+        max_workers_download
+    )
 
     # load subtask (replace with your actual logic)
-    train_data, val_data, test_data = _load_subtask(root_path, task_name, 
-        subtask_name)
+    (
+        train_data, 
+        val_data, 
+        test_data
+    ) = _load_subtask(
+        local_dir, 
+        subtask_name, 
+        data_frac, 
+        max_workers
+    )
     
     return train_data, val_data, test_data
 
 
-def _load_subtask(root_path: str, task_name: str, subtask_name: str):
-    """This is a placeholder for subtask loading logic."""
-    return 0, 0, 0
+def _load_subtask(
+    local_dir: str, 
+    subtask_name: str,
+    data_frac: int,
+    max_workers: int
+):
+    """Load standardized task."""
+    print(f"Preparing subtask '{subtask_name}'...")
+    if 'OPFData' in local_dir:
+        (
+            train_data, 
+            val_data, 
+            test_data 
+        ) = opfdata.load(
+            local_dir, 
+            subtask_name,
+            data_frac,
+            max_workers
+        )
+    else:
+        raise NotImplementedError("Other tasks not yet implemented!")
+
+    print(f"Data for {subtask_name} successfully loaded.\n")
+    return train_data, val_data, test_data
 
 
-def _download_hf_repo(root_path: str, task_name: str, max_workers_download: int, 
-    max_workers_load: int):
+def _download_hf_repo(
+    local_dir: str, 
+    task_name: str, 
+    max_workers: int,
+    max_workers_download: int
+):
     """Download and uncompress all files from the Hugging Face in parallel."""
+    print(f"Preparing local data directory for '{task_name}'...")
 
-    local_dir = os.path.join(root_path, task_name)
     repo_id = f'AI4Climate/{task_name}'
 
     # Step 1: Collect all files (recursively)
@@ -68,7 +112,7 @@ def _download_hf_repo(root_path: str, task_name: str, max_workers_download: int,
 
     if compressed_files:
         print(f"Uncompressing {len(compressed_files)} files in parallel...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_load) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_compressed = {
                 executor.submit(_uncompress_and_delete_file, path): path 
                 for path in compressed_files
@@ -83,8 +127,12 @@ def _download_hf_repo(root_path: str, task_name: str, max_workers_download: int,
         print("All compressed files have been uncompressed (and deleted).")
 
 
-def _collect_files(repo_id: str, local_dir: str, subpath: str, 
-    files_list: list):
+def _collect_files(
+    repo_id: str, 
+    local_dir: str, 
+    subpath: str, 
+    files_list: list
+):
     """Recursively gather file paths from the Hugging Face API and append them
     as (file_url, local_entry_path) tuples to files_list.
     """
@@ -115,7 +163,10 @@ def _collect_files(repo_id: str, local_dir: str, subpath: str,
                 files_list=files_list)
 
 
-def _download_single_file(url: str, local_path: str):
+def _download_single_file(
+    url: str, 
+    local_path: str
+):
     """Download a single file via wget subprocess call."""
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     print(f"Downloading {url} -> {local_path}")
