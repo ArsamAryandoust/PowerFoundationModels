@@ -3,10 +3,10 @@
 Compress processed OPFData files for upload to Hugging Face.
 
 Example run:
+    $ ./compress_opfdata.sh regular pglib_opf_case14_ieee
 
-    $ compress_opfdata.sh regular pglib_opf_case14_ieee
-
-    $ compress_opfdata.sh n-2 pglib_opf_case118_ieee
+or:
+    $ ./compress_opfdata.sh n-1 pglib_opf_case118_ieee
 
 List of cases:
 
@@ -23,28 +23,33 @@ List of cases:
 
 '
 # base path to processed OPFData repository
-PATH_BASE="../../donti_group_shared/AI4Climate/processed/OPFData"
+PATH_ORIGIN="../../donti_group_shared/SharedDatasets/OPFData"
+PATH_TARGET="../../donti_group_shared/AI4Climate/processed/OPFData"
 
 echo "realease": $1
 echo "grid": $2
 
 # create path to release
 if [ $1 == "regular" ]; then
-    PATH_DATA="${PATH_BASE}/dataset_release_1"
+    PATH_ORIGIN="${PATH_ORIGIN}/dataset_release_1"
 elif [ $1 == "n-1" ]; then
-    PATH_DATA="${PATH_BASE}/dataset_release_1_nminusone"
+    PATH_ORIGIN="${PATH_ORIGIN}/dataset_release_1_nminusone"
 else
     echo "invalid first argument"
+    exit 1
 fi
 
 # create path to dataset
-PATH_DATA="${PATH_DATA}/$2"
+PATH_ORIGIN="${PATH_ORIGIN}/$2"
+PATH_TARGET="${PATH_TARGET}/$2"
 
-for entry in $(ls "$PATH_DATA")
-do
-    PATH_DATA_GROUP="${PATH_DATA}/${entry}"
-    PATH_FILENAME="${PATH_DATA_GROUP}.tar.gz"
-    tar -czvf "$PATH_FILENAME" "$PATH_DATA_GROUP" &
+# Create target directory if needed
+mkdir -p "$PATH_TARGET"
+
+for entry in $(ls "$PATH_ORIGIN"); do
+    DIR_NAME="$entry"
+    PATH_FILENAME="${PATH_TARGET}/${DIR_NAME}.tar.gz"
+    tar -czvf "$PATH_FILENAME" -C "$PATH_ORIGIN" "$DIR_NAME" &
 done 
 
 # Wait until all parallel background processes complete
