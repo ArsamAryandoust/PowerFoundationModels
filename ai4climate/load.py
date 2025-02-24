@@ -138,7 +138,8 @@ def _download_hf_repo(
 
 
 def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list):
-    """Recursively gather file paths from the Hugging Face API 
+    """
+    Recursively gather file paths from the Hugging Face API 
     and append them as (file_url, local_entry_path) tuples to files_list.
     """
     api_url = f"https://huggingface.co/api/datasets/{repo_id}/tree/main"
