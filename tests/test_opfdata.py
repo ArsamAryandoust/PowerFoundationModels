@@ -10,7 +10,9 @@ root_path = "../../donti_group_shared/AI4Climate/tests"
 ) = load.load_task(
     "OPFData", 
     "train_small_test_medium", 
-    root_path
+    root_path,
+    data_frac = 0.01,
+    train_frac = 0.1
 )
 
 print(train_data)

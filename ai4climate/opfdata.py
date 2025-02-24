@@ -1,8 +1,11 @@
 """Load requested subtask for OPFData."""
 import os 
 import gc
+import math
 import json
-import random 
+import random
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 small_grids_list =[
     'pglib_opf_case14_ieee',
@@ -26,10 +29,11 @@ large_grids_list = [
 # train validation testing ratio
 split_ratio = (0.5, 0.1, 0.4)
 
-def load_opfdata(
+def load(
     local_dir: str, 
     subtask_name: str,
     data_frac: int,
+    train_frac: int,
     max_workers: int
 ):
     """Load out-of-distribution benchmark by merging grids in one pass."""

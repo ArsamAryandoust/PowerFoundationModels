@@ -1,7 +1,7 @@
 import os
 import requests
 import subprocess
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # individual task loading modules
 import opfdata
@@ -11,10 +11,11 @@ def load_task(
     subtask_name: str,
     root_path: str = None,
     data_frac: int = 1,
+    train_frac: int = 1,
     max_workers: int = 1024,
     max_workers_download: int = 4,
 ):
-    """Download task repository and load standardized subtask."""
+    """Download task repository (if needed) and load standardized subtask."""
     print(f"Processing '{subtask_name}' for '{task_name}'...")
 
     # If no root_path is given, default to ~/AI4Climate
@@ -24,7 +25,7 @@ def load_task(
     # set path to local directory
     local_dir = os.path.join(root_path, task_name)
 
-    # download task repository
+    # download task repository (skips already-downloaded & already-uncompressed)
     _download_hf_repo(
         local_dir, 
         task_name,
@@ -32,7 +33,7 @@ def load_task(
         max_workers_download
     )
 
-    # load subtask (replace with your actual logic)
+    # load subtask
     (
         train_data, 
         val_data, 
@@ -40,7 +41,8 @@ def load_task(
     ) = _load_subtask(
         local_dir, 
         subtask_name, 
-        data_frac, 
+        data_frac,
+        train_frac,
         max_workers
     )
     
@@ -51,6 +53,7 @@ def _load_subtask(
     local_dir: str, 
     subtask_name: str,
     data_frac: int,
+    train_frac: int,
     max_workers: int
 ):
     """Load standardized task."""
@@ -64,6 +67,7 @@ def _load_subtask(
             local_dir, 
             subtask_name,
             data_frac,
+            train_frac,
             max_workers
         )
     else:
@@ -79,7 +83,12 @@ def _download_hf_repo(
     max_workers: int,
     max_workers_download: int
 ):
-    """Download and uncompress all files from the Hugging Face in parallel."""
+    """
+    Download and uncompress all files from Hugging Face in parallel,
+    skipping download where files or final uncompressed data already exist,
+    and skipping decompression if data is already extracted (but removing the 
+    compressed file if present).
+    """
     print(f"Preparing local data directory for '{task_name}'...")
 
     repo_id = f'AI4Climate/{task_name}'
@@ -88,53 +97,49 @@ def _download_hf_repo(
     files_to_download = []
     _collect_files(repo_id, local_dir, subpath="", files_list=files_to_download)
 
-    # Step 2: Download them in parallel
-    print(f"\nFound {len(files_to_download)} files to download.")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_download) as executor:
+    # Step 2: Download them in parallel (only if needed)
+    print(f"\nFound {len(files_to_download)} files to manage (download if needed).")
+    with ThreadPoolExecutor(max_workers=max_workers_download) as executor:
         future_to_file = {
             executor.submit(_download_single_file, url, local_path): (url, local_path)
             for (url, local_path) in files_to_download
         }
-        for future in concurrent.futures.as_completed(future_to_file):
+        for future in as_completed(future_to_file):
             url, local_path = future_to_file[future]
             try:
                 future.result()  # will raise CalledProcessError if 'wget' fails
             except Exception as e:
-                print(f"Download failed for {url}: {e}")
+                print(f"Download failed/skipped for {url}: {e}")
 
-    print(f"Data for {repo_id} successfully downloaded to {local_dir}.\n")
+    print(f"Data for {repo_id} is now available at {local_dir}.\n")
 
-    # Step 3: Uncompress files and delete compressed files in parallel
-    # Detect compressed files from the downloaded list
+    # Step 3: Uncompress files in parallel if needed
     compressed_exts = (".zip", ".tar.gz", ".tar")
-    compressed_files = [local_path for (_, local_path) in files_to_download 
-                        if local_path.endswith(compressed_exts)]
+    compressed_files = [
+        local_path for (_, local_path) in files_to_download 
+        if local_path.endswith(compressed_exts) and os.path.exists(local_path)
+    ]
 
     if compressed_files:
-        print(f"Uncompressing {len(compressed_files)} files in parallel...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        print(f"Uncompressing {len(compressed_files)} files (if needed) in parallel...")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_compressed = {
                 executor.submit(_uncompress_and_delete_file, path): path 
                 for path in compressed_files
             }
-            for future in concurrent.futures.as_completed(future_to_compressed):
+            for future in as_completed(future_to_compressed):
                 path = future_to_compressed[future]
                 try:
                     future.result()
                 except Exception as e:
                     print(f"Uncompress & delete failed for {path}: {e}")
         
-        print("All compressed files have been uncompressed (and deleted).")
+        print("All compressed files have been handled.")
 
 
-def _collect_files(
-    repo_id: str, 
-    local_dir: str, 
-    subpath: str, 
-    files_list: list
-):
-    """Recursively gather file paths from the Hugging Face API and append them
-    as (file_url, local_entry_path) tuples to files_list.
+def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list):
+    """Recursively gather file paths from the Hugging Face API 
+    and append them as (file_url, local_entry_path) tuples to files_list.
     """
     api_url = f"https://huggingface.co/api/datasets/{repo_id}/tree/main"
     if subpath:
@@ -157,39 +162,96 @@ def _collect_files(
         if entry_type == 'file':
             file_url = f"https://huggingface.co/datasets/{repo_id}/resolve/main/{entry_path}"
             files_list.append((file_url, local_entry_path))
-
         elif entry_type == 'directory':
-            _collect_files(repo_id, local_dir, subpath=entry_path, 
-                files_list=files_list)
+            _collect_files(repo_id, local_dir, subpath=entry_path, files_list=files_list)
 
 
-def _download_single_file(
-    url: str, 
-    local_path: str
-):
-    """Download a single file via wget subprocess call."""
+def _download_single_file(url: str, local_path: str):
+    """
+    Download a single file via wget subprocess call. Skips if:
+      1) local file already exists, OR
+      2) the uncompressed directory already exists (for compressed files).
+    If the uncompressed directory exists, also removes any leftover .zip/.tar* 
+    to keep things clean.
+    """
+    # If file already exists, skip
+    if os.path.exists(local_path):
+        print(f"[SKIP] {local_path} already present.")
+        return
+
+    # If it's a compressed file, check if the uncompressed data is already there.
+    if _is_compressed_file(local_path):
+        base_folder = _guess_uncompressed_dir(local_path)
+        if base_folder and os.path.isdir(base_folder):
+            # If we see the final uncompressed folder is present, skip download.
+            # Also remove leftover compressed file if it somehow exists.
+            if os.path.exists(local_path):
+                os.remove(local_path)
+            print(f"[SKIP] '{base_folder}' is already uncompressed; removing leftover compressed file if any.")
+            return
+
+    # If we reach here, we proceed with download
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     print(f"Downloading {url} -> {local_path}")
     subprocess.run(["wget", "-q", "-O", local_path, url], check=True)
 
 
 def _uncompress_and_delete_file(file_path: str):
-    """Decompress a file (zip/tar/tar.gz) into its directory, then delete the 
-    original. Adjust or extend as needed for other compression formats.
     """
-    # Choose the right tool/command based on file extension
+    Decompress a file (zip/tar/tar.gz) into its directory, then delete 
+    the original. If the uncompressed data is already present, skip 
+    decompression but still remove the compressed file.
+    """
+    if not os.path.exists(file_path):
+        return  # someone else might have deleted it already
+
+    parent_dir = os.path.dirname(file_path)
+    base_folder = _guess_uncompressed_dir(file_path)
+
+    # If we already have the uncompressed data, skip decompress, but remove the compressed file.
+    if base_folder and os.path.isdir(base_folder):
+        print(f"[SKIP] Already uncompressed: {base_folder} exists. Removing {file_path}.")
+        os.remove(file_path)
+        return
+
+    # Now figure out the correct decompression command
     if file_path.endswith(".zip"):
-        cmd = ["unzip", "-o", file_path, "-d", os.path.dirname(file_path)]
+        cmd = ["unzip", "-o", file_path, "-d", parent_dir]
     elif file_path.endswith(".tar.gz"):
-        cmd = ["tar", "-xzf", file_path, "-C", os.path.dirname(file_path)]
+        cmd = ["tar", "-xzf", file_path, "-C", parent_dir]
     elif file_path.endswith(".tar"):
-        cmd = ["tar", "-xf", file_path, "-C", os.path.dirname(file_path)]
+        cmd = ["tar", "-xf", file_path, "-C", parent_dir]
     else:
-        print(f"Skipping unrecognized file format: {file_path}")
+        print(f"[SKIP] Unrecognized compression format: {file_path}")
         return
 
     print(f"Uncompressing {file_path}...")
     subprocess.run(cmd, check=True)
-
     print(f"Deleting {file_path}...")
     os.remove(file_path)
+
+
+def _is_compressed_file(local_path: str) -> bool:
+    """Return True if the path ends with a known compression extension."""
+    compressed_exts = (".zip", ".tar.gz", ".tar")
+    return any(local_path.endswith(ext) for ext in compressed_exts)
+
+
+def _guess_uncompressed_dir(compressed_path: str) -> str:
+    """
+    Given a compressed file name, guess the resulting directory name
+    after decompression. This is a naive approach:
+      - .zip    -> strip .zip
+      - .tar.gz -> strip .tar.gz
+      - .tar    -> strip .tar
+    """
+    # If .tar.gz
+    if compressed_path.endswith(".tar.gz"):
+        return compressed_path[:-7]  # remove .tar.gz
+    # If .zip
+    if compressed_path.endswith(".zip"):
+        return compressed_path[:-4]  # remove .zip
+    # If .tar
+    if compressed_path.endswith(".tar"):
+        return compressed_path[:-4]  # remove .tar
+    return ""  # no guess if unrecognized
