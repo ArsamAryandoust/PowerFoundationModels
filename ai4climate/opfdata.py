@@ -13,7 +13,7 @@ small_grids_list =[
 medium_grids_list = [
     'pglib_opf_case118_ieee',
     'pglib_opf_case500_goc',
-    'pglib_opf_case2000_goc'
+#    'pglib_opf_case2000_goc'
 ]
 
 large_grids_list = [
@@ -26,7 +26,7 @@ large_grids_list = [
 # train validation testing ratio
 split_ratio = (0.5, 0.1, 0.4)
 
-def load(
+def load_opfdata(
     local_dir: str, 
     subtask_name: str,
     data_frac: int,
@@ -34,7 +34,6 @@ def load(
 ):
     """Load out-of-distribution benchmark by merging grids in one pass."""
     
-
     # set train and validation grids
     if subtask_name.startswith('train_small'):
         train_grids = small_grids_list
@@ -88,7 +87,7 @@ def load(
     test_dataset = dict(test_items)
     
     # 3) Parse data
-    
+
 
     return train_dataset, valid_dataset, test_dataset
 
