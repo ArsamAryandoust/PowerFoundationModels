@@ -5,7 +5,7 @@ import math
 import json
 import random
 import torch
-import numpy as np 
+import numpy as np
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -18,7 +18,7 @@ small_grids_list =[
 medium_grids_list = [
     'pglib_opf_case118_ieee',
     'pglib_opf_case500_goc',
-#    'pglib_opf_case2000_goc'
+    'pglib_opf_case2000_goc'
 ]
 
 large_grids_list = [
@@ -467,7 +467,7 @@ def _set_edgelevel_values(
         Yc_ijR_im_e[idx] = values[10] # line charging suseptance "to" bus
         
     # transformation between polar and rectangular form
-    Y_mag_e, Y_ang_e = solver_utils.rectangle_to_polar(Y_re_e, Y_im_e)
+    Y_mag_e, Y_ang_e = _rectangle_to_polar(Y_re_e, Y_im_e)
 
     # create edge indices in reverse order
     ijR_e = ij_e[:, [1, 0]]
@@ -567,3 +567,18 @@ def _shuffle_datadict(dataset):
     items = list(dataset.items())
     random.shuffle(items)
     return dict(items)
+
+
+def _rectangle_to_polar(X_re, X_im):
+    """Transform passed variable from rectangular to polar form."""
+    small_number = 1.e-10
+    if isinstance(X_re, torch.Tensor):
+        X_mag = torch.sqrt(X_re**2 + X_im**2)
+        X_ang = torch.atan(X_im / (X_re + small_number))  # avoids zero division
+    elif isinstance(X_re, np.ndarray):
+        X_mag = np.sqrt(X_re**2 + X_im**2)
+        X_ang = np.arctan(X_im / (X_re + small_number))  # avoids zero division
+    else:
+        raise TypeError("Inputs must be  torch.Tensors or numpy.ndarrays.")
+
+    return X_mag, X_ang
