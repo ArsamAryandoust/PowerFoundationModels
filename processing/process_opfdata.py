@@ -8,7 +8,7 @@ be called individually
 Example:
 --------
     
-    $ python merge_opf.py pglib_opf_case14_ieee regular
+    $ python process_opfdata.py pglib_opf_case14_ieee regular
     
 """
 from multiprocessing import Process
