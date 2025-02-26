@@ -14,7 +14,7 @@ def load_task(
     train_frac: int = 1,
     max_workers: int = 1024,
     max_workers_download: int = 4,
-):
+) -> dict:
     """Download task repository (if needed) and load standardized subtask."""
     print(f"Processing '{subtask_name}' for '{task_name}'...")
 
@@ -34,11 +34,7 @@ def load_task(
     )
 
     # load subtask
-    (
-        train_data, 
-        val_data, 
-        test_data
-    ) = _load_subtask(
+    subtask_data = _load_subtask(
         local_dir, 
         subtask_name, 
         data_frac,
@@ -59,11 +55,7 @@ def _load_subtask(
     """Load standardized task."""
     print(f"Preparing subtask '{subtask_name}'...")
     if 'OPFData' in local_dir:
-        (
-            train_data, 
-            val_data, 
-            test_data 
-        ) = opfdata.load(
+        subtask_data = opfdata.load(
             local_dir, 
             subtask_name,
             data_frac,
@@ -74,7 +66,8 @@ def _load_subtask(
         raise NotImplementedError("Other tasks not yet implemented!")
 
     print(f"Data for {subtask_name} successfully loaded.\n")
-    return train_data, val_data, test_data
+    
+    return subtask_data
 
 
 def _download_hf_repo(
