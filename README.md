@@ -28,4 +28,4 @@ dataset = load_dataset('OPFData', 'train_small_test_medium')
 ## List of available datasets
 
 1. [OPFData](docs/opfdata.md)
-
+2. [PowerGraph](docs/powergraph.md)
