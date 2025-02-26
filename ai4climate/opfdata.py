@@ -106,7 +106,14 @@ def load(
         test_dataset
     )
 
-    return train_dataset, valid_dataset, test_dataset
+    # return as dictionary.
+    subtask_data = {
+        'train_data': train_dataset,
+        'val_data': valid_dataset,
+        'test_data': test_dataset
+    }
+
+    return subtask_data
 
 def _parse_datasets(
     train_dataset: dict,
