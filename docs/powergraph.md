@@ -1,4 +1,4 @@
-# OPFData
+# PowerGraph
 
 ## Raw data download
 
