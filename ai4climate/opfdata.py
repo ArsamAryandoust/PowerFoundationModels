@@ -106,11 +106,22 @@ def load(
         test_dataset
     )
 
+    # problem formulation functions.
+    problem_funcs = {
+        'obj_gen_cost': obj_gen_cost,
+        'eq_pbalance_re': eq_pbalance_re,
+        'eq_pbalance_im': eq_pbalance_im, 
+        'ineq_lower_box': ineq_lower_box,
+        'ineq_upper_box': ineq_upper_box,
+        'eq_difference': eq_difference
+    }
+
     # return as dictionary.
     subtask_data = {
         'train_data': train_dataset,
         'val_data': valid_dataset,
-        'test_data': test_dataset
+        'test_data': test_dataset,
+        'problem_funcs': problem_funcs
     }
 
     return subtask_data
@@ -505,7 +516,6 @@ def _set_edgelevel_values(
 def _set_attr_to_dict(**attributes):
     return {key: value for key, value in attributes.items()}
 
-
 def _numpy_to_tensor(data_dict):
     for key, value in data_dict.items():
         if isinstance(value, np.ndarray):
@@ -575,7 +585,6 @@ def _shuffle_datadict(dataset):
     random.shuffle(items)
     return dict(items)
 
-
 def _rectangle_to_polar(X_re, X_im):
     """Transform passed variable from rectangular to polar form."""
     small_number = 1.e-10
@@ -589,3 +598,49 @@ def _rectangle_to_polar(X_re, X_im):
         raise TypeError("Inputs must be  torch.Tensors or numpy.ndarrays.")
 
     return X_mag, X_ang
+
+### Objective function
+def obj_gen_cost(
+    Sg_re_g, 
+    c2_g, 
+    c1_g, 
+    c0_g
+):
+    """ """
+    return torch.sum(c2_g * Sg_re_g**2 + c1_g * Sg_re_g + c0_g)
+
+### Equality constraints
+def eq_pbalance_re(
+    Sg_re_n, 
+    Sd_re_n, 
+    Ys_re_n, 
+    V_mag_n, 
+    Sij_re_n, 
+    SijR_re_n
+):
+    """ """
+    return Sg_re_n - Sd_re_n - Ys_re_n * V_mag_n**2 - Sij_re_n - SijR_re_n
+    
+def eq_pbalance_im(
+    Sg_im_n, 
+    Sd_im_n, 
+    Ys_im_n, 
+    V_mag_n, 
+    Sij_im_n, 
+    SijR_im_n
+):
+    """ """
+    return Sg_im_n - Sd_im_n + Ys_im_n * V_mag_n**2 - Sij_im_n - SijR_im_n
+
+### Inequality constraints
+def ineq_lower_box(x_value, x_lower):
+    """ """
+    return x_lower - x_value
+
+def ineq_upper_box(x_value, x_upper):
+    """ """
+    return x_value - x_upper
+
+def eq_difference(x_value, x_true_value):
+    """ """
+    return x_value - x_true_value
