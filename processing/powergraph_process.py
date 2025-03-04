@@ -1,151 +1,126 @@
-"""Contains multi-processing functions that pre-process datasets in parallel.
-
-Main entry point to script-wise data pre-processing. Contains function that can
-be called individually
-
-
-Example:
---------
-    
-    $ python process_powergraph.py
-    
-"""
 import os
 import json
 import mat73
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# set up base paths
+
 path_root_target = '../../donti_group_shared/AI4Climate/processed/PowerGraph'
 path_root_source = '../../donti_group_shared/AI4Climate/raw/PowerGraph_raw'
 path_texas = os.path.join(path_root_source, 'raw')
-path_uk = os.path.join(path_root_source, 'dataset_cascades/uk/uk/raw')
-path_ieee24 = os.path.join(path_root_source, 'dataset_cascades/ieee24/ieee24/raw')
-path_ieee39 = os.path.join(path_root_source, 'dataset_cascades/ieee39/ieee39/raw')
-path_ieee118 = os.path.join(path_root_source, 'dataset_cascades/ieee118/ieee118/raw')
 
-datapoints_per_file = 100
+max_workers = 1024
+n_file = 100
 
 def main():
-    """ """
-    # create a list of paths to datasets
     path_list = [
-        #path_texas,
+        path_texas,
         #path_uk,
-        path_ieee24,
-        path_ieee39,
-        path_ieee118
+        #path_ieee24,
+        #path_ieee39,
+        #path_ieee118
     ]
-
-    # create a list of corresponding data names
     name_list = [
-        #'texas',
+        'texas',
         #'uk',
-        'ieee24',
-        'ieee39',
-        'ieee118'
+        #'ieee24',
+        #'ieee39',
+        #'ieee118'
     ]
-
-    # iterate over paths
+    
     for id_case, data_path in enumerate(path_list):
-        
-        #####################################
-        # Set up path and folders
-        #####################################
-
-        # case name
         casename = name_list[id_case]
-
-        # path case
         path_target = os.path.join(path_root_target, casename)
-        
-        # create directories if not existent
         os.makedirs(path_target, exist_ok=True)
 
+        # Load data
+        Bf = mat73.loadmat(os.path.join(data_path, 'Bf.mat'))['B_f_tot']
+        blist = mat73.loadmat(os.path.join(data_path, 'blist.mat'))['bList']
+        Ef_nc = mat73.loadmat(os.path.join(data_path, 'Ef_nc.mat'))['E_f_kenza']
+        Ef = mat73.loadmat(os.path.join(data_path, 'Ef.mat'))['E_f_post']
+        exp = mat73.loadmat(os.path.join(data_path, 'exp.mat'))['explainations']
+        of_bi = mat73.loadmat(os.path.join(data_path, 'of_bi.mat'))['output_features']
+        of_mc = mat73.loadmat(os.path.join(data_path, 'of_mc.mat'))['category']
+        of_reg = mat73.loadmat(os.path.join(data_path, 'of_reg.mat'))['dns_MW']
 
-        #####################################
-        # Load and extract data
-        #####################################
+        data = {
+            "Bf": Bf,
+            "blist": blist,
+            "Ef_nc": Ef_nc,
+            "Ef": Ef,
+            "exp": exp,
+            "of_bi": of_bi,
+            "of_mc": of_mc,
+            "of_reg": of_reg
+        }
 
-        # load data 
-        Bf = mat73.loadmat(os.path.join(data_path, 'Bf.mat'))
-        blist = mat73.loadmat(os.path.join(data_path, 'blist.mat'))
-        Ef_nc = mat73.loadmat(os.path.join(data_path, 'Ef_nc.mat'))
-        Ef = mat73.loadmat(os.path.join(data_path, 'Ef.mat'))
-        exp = mat73.loadmat(os.path.join(data_path, 'exp.mat'))
-        of_bi = mat73.loadmat(os.path.join(data_path, 'of_bi.mat'))
-        of_mc = mat73.loadmat(os.path.join(data_path, 'of_mc.mat'))
-        of_reg = mat73.loadmat(os.path.join(data_path, 'of_reg.mat'))
+        n = len(Bf)
 
-        # exctract data point lists from dictionary
-        Bf = Bf['B_f_tot']
-        blist = blist['bList']
-        Ef_nc = Ef_nc['E_f_kenza']
-        Ef = Ef['E_f_post']
-        exp = exp['explainations']
-        of_bi = of_bi['output_features']
-        of_mc = of_mc['category']
-        of_reg = of_reg['dns_MW']
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for i_file, i in enumerate(range(0, n, n_file)):
+                future = executor.submit(
+                    _process_data, data, i, i_file, path_target
+                )
+                futures.append(future)
+            for f in as_completed(futures):
+                status = f.result()   # the string returned by _process_data
+                print(status)
 
+def _process_data(data, i, i_file, path_target):
+    """Worker function that processes a chunk of the data and saves JSON."""
+    Bf = data['Bf']
+    blist = data['blist']
+    Ef_nc = data['Ef_nc']
+    Ef = data['Ef']
+    exp = data['exp']
+    of_bi = data['of_bi']
+    of_mc = data['of_mc']
+    of_reg = data['of_reg']
 
-        #####################################
-        # Create data points as dictionaries
-        #####################################
-        n_datapoints = len(Bf)
+    n_file = 100  # or pass this in as an argument, if you prefer
+    data_dict = {}
+    n = len(Bf)
 
-        # iterate over data points
-        filename_counter = 1
-        for i in range(0, n_datapoints, datapoints_per_file):
-            data_dict = {}
-            for j in range(i, i+datapoints_per_file):
+    for j in range(i, min(i + n_file, n)):
+        node_features = {
+            1: Bf[j][0][:, 0].tolist(),
+            2: Bf[j][0][:, 1].tolist(),
+            3: Bf[j][0][:, 2].tolist()
+        }
+        edges_features = {
+            1: Ef_nc[j][0][:, 0].tolist(),
+            2: Ef_nc[j][0][:, 1].tolist(),
+            3: Ef_nc[j][0][:, 2].tolist(),
+            4: Ef_nc[j][0][:, 3].tolist(),
+            5: Ef[j][0][:, 0].tolist(),
+            6: Ef[j][0][:, 1].tolist(),
+            7: Ef[j][0][:, 2].tolist(),
+            8: Ef[j][0][:, 3].tolist()
+        }
+        labels = {
+            1: of_bi[j][0].item(),
+            2: of_mc[j][0].tolist(),
+            3: of_reg[j],
+            4: (exp[j][0] if exp[j][0] is None else exp[j][0].tolist())
+        }
+        edge_index = {
+            1: blist[:, 0].tolist(),
+            2: blist[:, 1].tolist()
+        }
 
-                # create node_features
-                node_features = {
-                    1: Bf[j][0][:, 0].tolist(),
-                    2: Bf[j][0][:, 1].tolist(),
-                    3: Bf[j][0][:, 2].tolist()
-                }
+        data_dict[j] = {
+            'nodes': node_features,
+            'edges': edges_features,
+            'edge_index': edge_index,
+            'labels': labels
+        }
+    
+    filename = f'merged_{i_file}.json'
+    path_save = os.path.join(path_target, filename)
+    with open(path_save, 'w') as json_outfile:
+        json.dump(data_dict, json_outfile)
 
-                # create edges_features
-                edges_features = {
-                    1: Ef_nc[j][0][:, 0].tolist(),
-                    2: Ef_nc[j][0][:, 1].tolist(),
-                    3: Ef_nc[j][0][:, 2].tolist(),
-                    4: Ef_nc[j][0][:, 3].tolist(),
-                    5: Ef[j][0][:, 0].tolist(),
-                    6: Ef[j][0][:, 1].tolist(),
-                    7: Ef[j][0][:, 2].tolist(),
-                    8: Ef[j][0][:, 3].tolist()
-                }
-
-                # create labels_dict
-                labels = {
-                    1: of_bi[j][0].item(),
-                    2: of_mc[j][0].tolist(),
-                    3: of_reg[j],
-                    4: exp[j][0] if exp[j][0] is None else exp[j][0].tolist()
-                }
-
-                edge_index = {
-                    1: blist[:, 0].tolist(),
-                    2: blist[:, 1].tolist()
-                }
-
-                # add data point to data dictionary
-                data_dict[j] = {
-                    'nodes': node_features,
-                    'edges': edges_features,
-                    'edge_index': edge_index,
-                    'labels': labels
-                }
-            
-            # save data dictionary as json file
-            filename = f'merged_{filename_counter}.json'
-            path_save = os.path.join(path_target, filename)
-            with open(path_save, 'w') as json_outfile:
-                json.dump(data_dict, json_outfile)
-            
-            # increment filename counter
-            filename_counter += 1
+    return f'processed {filename}'
 
 
 if __name__ == '__main__':
