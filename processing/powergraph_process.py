@@ -6,27 +6,28 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 path_root_target = '../../donti_group_shared/AI4Climate/processed/PowerGraph'
 path_root_source = '../../donti_group_shared/AI4Climate/raw/PowerGraph_raw'
-path_texas = os.path.join(path_root_source, 'raw')
+path_uk = os.path.join(path_root_source, 'dataset_cascades/uk/uk/raw')
+path_ieee24 = os.path.join(path_root_source, 'dataset_cascades/ieee24/ieee24/raw')
+path_ieee39 = os.path.join(path_root_source, 'dataset_cascades/ieee39/ieee39/raw')
+path_ieee118 = os.path.join(path_root_source, 'dataset_cascades/ieee118/ieee118/raw')
 
 max_workers = 1024
 n_file = 100
 
 def main():
     path_list = [
-        path_texas,
-        #path_uk,
-        #path_ieee24,
-        #path_ieee39,
-        #path_ieee118
+        path_uk,
+        path_ieee24,
+        path_ieee39,
+        path_ieee118
     ]
     name_list = [
-        'texas',
-        #'uk',
-        #'ieee24',
-        #'ieee39',
-        #'ieee118'
+        'uk',
+        'ieee24',
+        'ieee39',
+        'ieee118'
     ]
-    
+
     for id_case, data_path in enumerate(path_list):
         casename = name_list[id_case]
         path_target = os.path.join(path_root_target, casename)
@@ -59,7 +60,7 @@ def main():
             futures = []
             for i_file, i in enumerate(range(0, n, n_file)):
                 future = executor.submit(
-                    _process_data, data, i, i_file, path_target
+                    _process_data, data, i, i_file+1, path_target
                 )
                 futures.append(future)
             for f in as_completed(futures):
@@ -67,7 +68,9 @@ def main():
                 print(status)
 
 def _process_data(data, i, i_file, path_target):
-    """Worker function that processes a chunk of the data and saves JSON."""
+    """Process a chunk of the data and save as JSON."""
+    print(f'Processing file number {i_file}')
+
     Bf = data['Bf']
     blist = data['blist']
     Ef_nc = data['Ef_nc']
@@ -77,7 +80,7 @@ def _process_data(data, i, i_file, path_target):
     of_mc = data['of_mc']
     of_reg = data['of_reg']
 
-    n_file = 100  # or pass this in as an argument, if you prefer
+    n_file = 100
     data_dict = {}
     n = len(Bf)
 
