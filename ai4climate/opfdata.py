@@ -9,19 +9,21 @@ import numpy as np
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-small_grids_list =[
+import dataset_utils
+
+SMALL_GRIDS_LIST =[
     'pglib_opf_case14_ieee',
     'pglib_opf_case30_ieee',
     'pglib_opf_case57_ieee'
 ]
 
-medium_grids_list = [
+MEDIUM_GRIDS_LIST = [
     'pglib_opf_case118_ieee',
     'pglib_opf_case500_goc',
     'pglib_opf_case2000_goc'
 ]
 
-large_grids_list = [
+LARGE_GRIDS_LIST = [
     'pglib_opf_case4661_sdet',
     'pglib_opf_case6470_rte',
     'pglib_opf_case10000_goc',
@@ -29,7 +31,7 @@ large_grids_list = [
 ]
 
 # train validation testing ratio
-split_ratio = (0.5, 0.1, 0.4)
+SPLIT_RATIO = (0.5, 0.1, 0.4)
 
 torch.set_default_dtype(torch.float64)
 np_dtype = np.float64
@@ -46,29 +48,29 @@ def load(
     
     # set train and validation grids
     if subtask_name.startswith('train_small'):
-        train_grids = small_grids_list
+        train_grids = SMALL_GRIDS_LIST
     elif subtask_name.startswith('train_medium'):
-        train_grids = medium_grids_list
+        train_grids = MEDIUM_GRIDS_LIST
     elif subtask_name.startswith('train_large'):
-        train_grids = large_grids_list
+        train_grids = LARGE_GRIDS_LIST
     
     # set testing grids
     if subtask_name.endswith('test_small'):
-        test_grids = small_grids_list
+        test_grids = SMALL_GRIDS_LIST
     elif subtask_name.endswith('test_medium'):
-        test_grids = medium_grids_list
+        test_grids = MEDIUM_GRIDS_LIST
     elif subtask_name.endswith('test_large'):
-        test_grids = large_grids_list
+        test_grids = LARGE_GRIDS_LIST
 
     # 1) Training and Validation datasets
     train_val_dataset = _load_multiple_grids(local_dir, train_grids, 
         data_frac, max_workers)
-    train_val_dataset = _shuffle_datadict(train_val_dataset)
+    train_val_dataset = dataset_utils.shuffle_datadict(train_val_dataset)
 
     total_size = len(train_val_dataset)
-    split_normalize = split_ratio[0] + split_ratio[1]
-    train_ratio = split_ratio[0] / split_normalize
-    val_ratio = split_ratio[1] / split_normalize
+    split_normalize = SPLIT_RATIO[0] + SPLIT_RATIO[1]
+    train_ratio = SPLIT_RATIO[0] / split_normalize
+    val_ratio = SPLIT_RATIO[1] / split_normalize
     size_train = int(total_size * train_ratio * train_frac)
     size_val = int(total_size * val_ratio)
 
@@ -90,7 +92,7 @@ def load(
     test_dataset = _shuffle_datadict(test_dataset)
 
     total_size = len(test_dataset)
-    size_test = int(total_size * split_ratio[2])
+    size_test = int(total_size * SPLIT_RATIO[2])
 
     test_items = list(test_dataset.items())
     test_items = test_items[:size_test]
@@ -126,6 +128,7 @@ def load(
     }
 
     return subtask_data
+
 
 def _parse_datasets(
     train_dataset: dict,
@@ -285,6 +288,7 @@ def _parse_and_aggregate_datapoint(
         "orig_attr": orig_attr, 
         "const_attr": const_attr
     }
+
 
 def _set_nodelevel_values(
     n, 
@@ -515,8 +519,10 @@ def _set_edgelevel_values(
         Y_re_n, Y_im_n, sang_low_e, sang_up_e, suR_e, Y_mag_e, Y_ang_e
     )
 
+
 def _set_attr_to_dict(**attributes):
     return {key: value for key, value in attributes.items()}
+
 
 def _numpy_to_tensor(data_dict):
     for key, value in data_dict.items():
@@ -527,8 +533,10 @@ def _numpy_to_tensor(data_dict):
 
     return data_dict
 
+
 def _concatenate_features(*arrays):
     return torch.stack([torch.from_numpy(arr) for arr in arrays], dim=1)
+
 
 def _load_multiple_grids(
     local_dir: str,
@@ -581,12 +589,6 @@ def _read_json(fpath: str) -> dict:
     with open(fpath, 'r') as fp:
         return json.load(fp)
 
-def _shuffle_datadict(dataset):
-    """Shuffle a dictionary by key."""
-    items = list(dataset.items())
-    random.shuffle(items)
-    return dict(items)
-
 def _rectangle_to_polar(X_re, X_im):
     """Transform passed variable from rectangular to polar form."""
     small_number = 1.e-10
@@ -601,6 +603,7 @@ def _rectangle_to_polar(X_re, X_im):
 
     return X_mag, X_ang
 
+
 ### Objective function
 def obj_gen_cost(
     Sg_re_g, 
@@ -610,6 +613,7 @@ def obj_gen_cost(
 ):
     """ """
     return torch.sum(c2_g * Sg_re_g**2 + c1_g * Sg_re_g + c0_g)
+
 
 ### Equality constraints
 def eq_pbalance_re(
@@ -633,6 +637,7 @@ def eq_pbalance_im(
 ):
     """ """
     return Sg_im_n - Sd_im_n + Ys_im_n * V_mag_n**2 - Sij_im_n - SijR_im_n
+
 
 ### Inequality constraints
 def ineq_lower_box(x_value, x_lower):

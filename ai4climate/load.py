@@ -10,11 +10,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import opfdata
 import powergraph
 
+LIST_AVAIL_TASKNAMES = [
+    'OPFData',
+    'PowerGraph'
+]
 
 def load_task(
     task_name: str,
     subtask_name: str,
-    root_path: str = None,
+    root_path: str = '~/AI4Climate',
     data_frac: int = 1,
     train_frac: int = 1,
     max_workers: int = 1024,
@@ -53,71 +57,7 @@ def load_task(
         max_workers
     )
     
-    return train_data, val_data, test_data
-
-
-def _validate_inputs(
-    task_name: str,
-    subtask_name: str,
-    root_path: str,
-    data_frac: float,
-    train_frac: int,
-    max_workers: int,
-    max_workers_download: int
-):
-    """ """
-
-    # validate task_name
-    if (
-        not task_name == 'OPFData' 
-        or not task_name == 'PowerGraph'
-    ):
-        sys.exit(f"Check arguments. Selected task {task_name} not recognized.")
-
-    else:
-        print(f"Processing '{subtask_name}' for '{task_name}'...")
-
-    # validate root_path
-    if root_path is None:
-        # If no root_path is given, default to ~/AI4Climate
-        root_path = os.path.expanduser('~/AI4Climate')
-        print(f'The root_path is not set. Setting root_path={root_path}')
-    else:
-        print(f'Using the root path {root_path} set by user.')
-
-    # validate data_frac
-    if data_frac <= 0 or data_frac > 1:
-        print(f'The data_frac is set to {data_frac}. This is invalid. Resuming',
-            'with a value of data_frac=1.')
-        data_frac = 1
-    else:
-        print(f'Using the full dataset with data_frac=1 set by user.')
-
-    # validate max_workers
-    if (
-        type(max_workers) is not int
-        or type(max_workers) is not float
-    ):
-        print(f'Invalid argument {max_workers} for max_workers. Setting,
-            max_workers=1024')
-        max_workers = 1024
-    else:
-        # setting ceiled value for max_workers for the case of passed fraction.
-        max_workers = math.ceil(max_workers)
-        print(f'Continuing with max_workers={max_workers}')
-
-    # validate max_workers_download
-    if (
-        type(max_workers_download) is not int
-        or type(max_workers_download) is not float
-    ):
-        print(f'Invalid argument {max_workers_download} for max_workers.',
-            'Setting max_workers_download=4.')
-        max_workers_download = 4
-    else:
-        # ceil value for max_workers_download in the case of passed fraction.
-        max_workers_download = math.ceil(max_workers_download)
-        print(f'Continuing with max_workers_download={max_workers_download}')
+    return subtask_data
 
 
 def _load_subtask(
@@ -332,3 +272,61 @@ def _guess_uncompressed_dir(compressed_path: str) -> str:
     if compressed_path.endswith(".tar"):
         return compressed_path[:-4]  # remove .tar
     return ""  # no guess if unrecognized
+
+
+def _validate_inputs(
+    task_name: str,
+    subtask_name: str,
+    root_path: str,
+    data_frac: float,
+    train_frac: int,
+    max_workers: int,
+    max_workers_download: int
+):
+    """ """
+
+    # validate task_name
+    if task_name not in LIST_AVAIL_TASKNAMES:
+        sys.exit(f"Check arguments. Selected task {task_name} not recognized.")
+
+    else:
+        print(f"Processing '{subtask_name}' for '{task_name}'...")
+
+    # validate root_path
+    if type(root_path) is not str:
+        print("root_path defined by user is not string. Set to '~/AI4Climate'")
+        root_path = '~/AI4Climate'
+
+    # validate data_frac
+    if data_frac <= 0 or data_frac > 1:
+        print(f'The data_frac is set to {data_frac}. This is invalid. Resuming',
+            'with a value of data_frac=1.')
+        data_frac = 1
+    else:
+        print(f'Using the full dataset with data_frac=1 set by user.')
+
+    # validate max_workers
+    if (
+        type(max_workers) is not int
+        or type(max_workers) is not float
+    ):
+        print(f'Invalid argument {max_workers} for max_workers. Setting',
+            'max_workers=1024')
+        max_workers = 1024
+    else:
+        # setting ceiled value for max_workers for the case of passed fraction.
+        max_workers = math.ceil(max_workers)
+        print(f'Continuing with max_workers={max_workers}')
+
+    # validate max_workers_download
+    if (
+        type(max_workers_download) is not int
+        or type(max_workers_download) is not float
+    ):
+        print(f'Invalid argument {max_workers_download} for max_workers.',
+            'Setting max_workers_download=4.')
+        max_workers_download = 4
+    else:
+        # ceil value for max_workers_download in the case of passed fraction.
+        max_workers_download = math.ceil(max_workers_download)
+        print(f'Continuing with max_workers_download={max_workers_download}')
