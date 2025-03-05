@@ -1,3 +1,4 @@
+""" """
 import os
 import requests
 import subprocess
@@ -5,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # individual task loading modules
 import opfdata
+import powergraph 
 
 def load_task(
     task_name: str,
@@ -51,12 +53,20 @@ def _load_subtask(
     data_frac: int,
     train_frac: int,
     max_workers: int
-):
+) -> dict:
     """Load standardized task."""
     print(f"Preparing subtask '{subtask_name}'...")
     if 'OPFData' in local_dir:
         subtask_data = opfdata.load(
             local_dir, 
+            subtask_name,
+            data_frac,
+            train_frac,
+            max_workers
+        )
+    elif 'PowerGraph' in local_dir:
+        subtask_data = powergraph.load(
+            local_dir,
             subtask_name,
             data_frac,
             train_frac,
@@ -77,10 +87,10 @@ def _download_hf_repo(
     max_workers_download: int
 ):
     """
-    Download and uncompress all files from Hugging Face in parallel,
-    skipping download where files or final uncompressed data already exist,
-    and skipping decompression if data is already extracted (but removing the 
-    compressed file if present).
+    Download and uncompress all files from Hugging Face in parallel, skipping 
+    download where files or final uncompressed data already exist, and skipping 
+    decompression if data is already extracted (but removing the compressed file 
+    if present).
     """
     print(f"Preparing local data directory for '{task_name}'...")
 
