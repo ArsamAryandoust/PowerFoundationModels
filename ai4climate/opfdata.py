@@ -34,6 +34,7 @@ split_ratio = (0.5, 0.1, 0.4)
 torch.set_default_dtype(torch.float64)
 np_dtype = np.float64
 
+
 def load(
     local_dir: str, 
     subtask_name: str,
@@ -338,6 +339,7 @@ def _set_nodelevel_values(
 
     return (Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, vl_n, vu_n, va_init_n, 
         ref_node_n, bustype_n, ref_bus, ref_count, vang_low_n, vang_up_n)
+
 
 def _set_generatorlevel_values(
     n, 
