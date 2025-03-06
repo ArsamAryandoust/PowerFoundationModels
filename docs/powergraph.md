@@ -20,7 +20,6 @@ Available sub-tasks are:
 - `cascading_failure_binary`
 - `cascading_failure_multiclass`
 - `demand_not_served`
-- `train_medium_test_large`
 - `cascading_failure_sequence`
 
 
