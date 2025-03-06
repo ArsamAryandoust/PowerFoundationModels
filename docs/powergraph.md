@@ -1,5 +1,7 @@
 # PowerGraph
 
+## Load task dataset
+
 You can both download and load all data associated with standardized PowerGraph tasks
 in the following fashion. For example, load the train_small_test_medium sub-task
 with:
@@ -22,7 +24,7 @@ Available sub-tasks are:
 - cascading_failure_sequence
 
 
-## Raw data download
+## Download raw data
 
 You can download the raw PowerGraph datasets from 
 https://figshare.com/articles/dataset/PowerGraph/22820534. The download can be
