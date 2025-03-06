@@ -17,12 +17,12 @@ dataset = load_task(
 ```
 
 Available sub-tasks are:
-- train_small_test_medium
-- train_small_test_large
-- train_medium_test_small
-- train_medium_test_large
-- train_large_test_small
-- train_large_test_medium
+- `train_small_test_medium`
+- `train_small_test_large`
+- `train_medium_test_small`
+- `train_medium_test_large`
+- `train_large_test_small`
+- `train_large_test_medium`
 
 
 ## Download raw data
