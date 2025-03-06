@@ -1,6 +1,31 @@
 # OPFData
 
-## Raw data download
+## Load task dataset
+
+You can both download and load all data associated with standardized OPFData task
+in the following fashion. For example, load the train_small_test_medium sub-task
+with:
+
+```Python
+from ai4climate import load_task
+
+dataset = load_task(
+    task_name='OPFData', 
+    subtask_name='train_small_test_medium',
+    root_path='~/AI4Climate/'
+)
+```
+
+Available sub-tasks are:
+- train_small_test_medium
+- train_small_test_large
+- train_medium_test_small
+- train_medium_test_large
+- train_large_test_small
+- train_large_test_medium
+
+
+## Download raw data
 
 You can download the raw OPFData datasets using Pytorch Geometric.
 
