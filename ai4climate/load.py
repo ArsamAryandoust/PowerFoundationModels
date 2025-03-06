@@ -308,7 +308,7 @@ def _validate_inputs(
     # validate max_workers
     if (
         type(max_workers) is not int
-        or type(max_workers) is not float
+        and type(max_workers) is not float
     ):
         print(f'Invalid argument {max_workers} for max_workers. Setting',
             'max_workers=1024')
@@ -321,7 +321,7 @@ def _validate_inputs(
     # validate max_workers_download
     if (
         type(max_workers_download) is not int
-        or type(max_workers_download) is not float
+        and type(max_workers_download) is not float
     ):
         print(f'Invalid argument {max_workers_download} for max_workers.',
             'Setting max_workers_download=4.')
