@@ -21,7 +21,7 @@ def load(
     subtask_name: str,
     data_frac: Union[int, float],
     train_frac: Union[int, float],
-    max_workers: int = 1
+    max_workers: int,
 ) -> Dict[str, Dict[str, Any]]:
     """Load and prepare the data for a given subtask."""
 
