@@ -1,2 +1,4 @@
+pyproject.toml
+setup.cfg
 somenotes
 */.ipynb_checkpoints

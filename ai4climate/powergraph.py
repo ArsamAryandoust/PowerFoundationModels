@@ -29,7 +29,7 @@ def load(
     data_dict = _load_json_files(local_dir, data_frac, max_workers=max_workers)
 
     # parse into subtask datasets
-    data_dict = _parse_dataset(data_dict)
+    data_dict = _parse_dataset(data_dict, subtask_name)
 
     # shuffle data 
     data_dict = dataset_utils.shuffle_datadict(data_dict)
@@ -48,9 +48,28 @@ def load(
     }
 
 
-def _parse_dataset(data_dict: Dict[str, Any]) -> Dict[str, Any]:
+def _parse_dataset(
+    data_dict: Dict[str, Any], 
+    subtask_name: str
+) -> Dict[str, Any]:
     """ """
 
+    if subtask_name == 'cascading_failure_binary':
+        for entry in data_dict.values():
+            entry['labels'] = entry['labels']['1']
+    
+    elif subtask_name == 'cascading_failure_multiclass':
+        for entry in data_dict.values():
+            entry['labels'] = entry['labels']['2']
+
+    elif subtask_name == 'demand_not_served':
+        for entry in data_dict.values():
+            entry['labels'] = entry['labels']['3']
+
+    elif subtask_name == 'cascading_failure_sequence':
+        for entry in data_dict.values():
+            entry['labels'] = entry['labels']['4']
+            
     return data_dict
 
 
