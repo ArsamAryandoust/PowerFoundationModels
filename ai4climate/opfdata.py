@@ -90,7 +90,7 @@ def load(
     # 2) Gather and load all test grids
     test_dataset = _load_multiple_grids(local_dir, test_grids, data_frac, 
         max_workers)
-    test_dataset = _shuffle_datadict(test_dataset)
+    test_dataset = dataset_utils.shuffle_datadict(test_dataset)
 
     total_size = len(test_dataset)
     size_test = int(total_size * SPLIT_RATIO[2])
