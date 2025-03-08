@@ -3,13 +3,9 @@ import gc
 import math
 import json
 import random
-
-import torch
 import numpy as np
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from typing import Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import dataset_utils
 
@@ -36,21 +32,22 @@ LARGE_GRIDS_LIST = [
 SPLIT_RATIO = (0.5, 0.1, 0.4)  # train, val, test
 
 # Set default dtypes
-torch.set_default_dtype(torch.float64)
 np_dtype = np.float64
+
 
 def load(
     local_dir: str, 
     subtask_name: str,
     data_frac: float,
     train_frac: float,
-    max_workers: int
+    max_workers: int,
+    seed: int = None
 ):
     """
     Load out-of-distribution benchmark by merging grids in one pass.
+    
     """
-
-    # 1) Which grids to load
+    ### 1) Determine which grids to load
     if subtask_name.startswith('train_small'):
         train_grids = SMALL_GRIDS_LIST
     elif subtask_name.startswith('train_medium'):
@@ -69,44 +66,60 @@ def load(
     else:
         raise ValueError(f"Unknown subtask_name: {subtask_name}")
 
-    # 2) Load train/val
-    train_val_dataset = _load_multiple_grids(local_dir, train_grids, data_frac, max_workers)
-    train_val_dataset = dataset_utils.shuffle_datadict(train_val_dataset)
+    ### 2) Load train/val
+
+    # load data
+    train_val_dataset = _load_multiple_grids(local_dir, train_grids, data_frac, 
+        max_workers, seed)
+
+    # shuffle
+    train_val_dataset = dataset_utils.shuffle_datadict(train_val_dataset, seed)
+
+    # determine split sizes
     total_size = len(train_val_dataset)
     split_normalize = SPLIT_RATIO[0] + SPLIT_RATIO[1]
     train_ratio = SPLIT_RATIO[0] / split_normalize
     val_ratio = SPLIT_RATIO[1] / split_normalize
-    size_train = int(total_size * train_ratio * train_frac)
+    size_train = int(total_size * train_ratio)
     size_val = int(total_size * val_ratio)
 
-    items = list(train_val_dataset.items())
+    # determine split IDs
+    end_train_id    = int(size_train * train_frac)
+    start_val_id    = size_train
+    end_val_id      = size_train + size_val
+
+    # transform dictionary items to list
+    train_val_dataset = list(train_val_dataset.items())
+
+    # slice list
+    train_dataset = dict(train_val_dataset[:end_train_id])
+    val_dataset = dict(train_val_dataset[start_val_id:end_val_id])
     del train_val_dataset
     gc.collect()
 
-    train_items = items[:size_train]
-    val_items = items[size_train : size_train + size_val]
-    del items
-    gc.collect()
+    ### 3) Load test
 
-    train_dataset = dict(train_items)
-    valid_dataset = dict(val_items)
+    # load data
+    test_dataset = _load_multiple_grids(local_dir, test_grids, data_frac, 
+        max_workers, seed)
 
-    # 3) Load test
-    test_dataset = _load_multiple_grids(local_dir, test_grids, data_frac, max_workers)
-    test_dataset = dataset_utils.shuffle_datadict(test_dataset)
+    # shuffle
+    test_dataset = dataset_utils.shuffle_datadict(test_dataset, seed)
+
+    # determine split size
     total_size = len(test_dataset)
     size_test = int(total_size * SPLIT_RATIO[2])
-    test_items = list(test_dataset.items())[:size_test]
-    test_dataset = dict(test_items)
 
-    # 4) Parse data
-    train_dataset, valid_dataset, test_dataset = _parse_datasets(
-        train_dataset, 
-        valid_dataset, 
-        test_dataset,
-    )
+    # transform to list and slice, then transform back to dict
+    test_dataset = list(test_dataset.items())[:size_test]
+    test_dataset = dict(test_dataset)
 
-    # 5) Problem functions
+    ### 4) Parse data
+    train_dataset = _parse_data(train_dataset)
+    val_dataset   = _parse_data(val_dataset)
+    test_dataset  = _parse_data(test_dataset)
+
+    ### 5) Problem functions
     loss_functions = {
         'obj_gen_cost': obj_gen_cost,
         'eq_pbalance_re': eq_pbalance_re,
@@ -116,34 +129,36 @@ def load(
         'eq_difference': eq_difference
     }
 
-    # 6) Return dictionary
+    ### 6) Return task data dictionary
     subtask_data = {
         'train_data': train_dataset,
-        'val_data': valid_dataset,
+        'val_data': val_dataset,
         'test_data': test_dataset,
         'loss_functions': loss_functions,
     }
+
     return subtask_data
 
 
-def _parse_datasets(
-    train_dataset: dict,
-    val_dataset: dict,
-    test_dataset: dict
-):
-    """Turn raw dict-of-dict data into list-of-data-points with the requested backend."""
-    train_dataset = _convert_dict_to_list(train_dataset)
-    val_dataset   = _convert_dict_to_list(val_dataset)
-    test_dataset  = _convert_dict_to_list(test_dataset)
-    return train_dataset, val_dataset, test_dataset
+def _parse_data(dataset_dict: dict) -> list:
+    """ 
+    Iterate over dataset dictionary, parse data points and add to data list
 
-
-def _convert_dict_to_list(dataset_dict: dict):
+    """
+    # empty list to fill
     data_list = []
+
+    # iterate over dictionary
     for i in range(len(dataset_dict)):
-        _, v = dataset_dict.popitem()
-        parsed = _parse_and_aggregate_datapoint(v, i_data=i)
-        data_list.append(parsed)
+        # pop item and maintain value only.
+        _, value = dataset_dict.popitem()
+
+        # parse value
+        value = _parse_and_aggregate_datapoint(value, i_data=i)
+
+        # add to data list
+        data_list.append(value)
+
     return data_list
 
 
@@ -151,8 +166,10 @@ def _parse_and_aggregate_datapoint(
     datapoint_dict: dict, 
     i_data: int
 ) -> dict:
-    """Parse data point dictionary into features. Return either Torch or Numpy structures."""
-
+    """
+    Parse data dictionary into features, return Numpy structures.
+    
+    """
     # Some dimension metadata
     baseMVA = datapoint_dict['grid']['context'][0][0][0]
     n = len(datapoint_dict['grid']['nodes']['bus'])
@@ -164,7 +181,7 @@ def _parse_and_aggregate_datapoint(
 
     load_buses = datapoint_dict['grid']['edges']['load_link']['receivers']
     shunt_buses = datapoint_dict['grid']['edges']['shunt_link']['receivers']
-    generator_buses = datapoint_dict['grid']['edges']['generator_link']['receivers']
+    gen_buses = datapoint_dict['grid']['edges']['generator_link']['receivers']
 
     # --- Node-level ---
     (
@@ -177,7 +194,8 @@ def _parse_and_aggregate_datapoint(
         Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g,
         pg_init_g, qg_init_g, gen_bus_g, ref_gen_list, vm_init_n, Sgl_re_n,
         Sgl_im_n, Sgu_re_n, Sgu_im_n, c0g_n, c1g_n, c2g_n, num_gen_n
-    ) = _set_generatorlevel_values(n, n_g, datapoint_dict, generator_buses, ref_bus)
+    ) = _set_generatorlevel_values(n, n_g, datapoint_dict, gen_buses, 
+        ref_bus)
 
     # --- Edge-level ---
     (
@@ -186,29 +204,13 @@ def _parse_and_aggregate_datapoint(
         Y_re_n, Y_im_n, sang_low_e, sang_up_e, suR_e, Y_mag_e, Y_ang_e
     ) = _set_edgelevel_values(n_e, datapoint_dict, Ys_re_n, Ys_im_n)
 
-    # Collect some grid-level attributes
-    grid_attr = {
-        "baseMVA": baseMVA,
-        "n": n,
-        "n_e": n_e,
-        "n_g": n_g,
-        "ref_bus": ref_bus,
-        "ref_gen_list": ref_gen_list,
-        "bustype_n": bustype_n,
-        "ij_e": ij_e,
-        "ijR_e": ijR_e,
-        "gen_bus_g": gen_bus_g,
-    }
-
-    # Convert these attributes if needed
-    grid_attr = _to_numpy_dict(grid_attr)
 
     # Node feature matrix
     x_node = np.stack(
         [
             Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, Y_re_n, Y_im_n,
             Sgl_re_n, Sgl_im_n, Sgu_re_n, Sgu_im_n, vl_n, vu_n,
-            c0g_n, c1g_n, c2g_n, num_gen_n, ref_node_n, basekV_n
+            c0g_n, c1g_n, c2g_n, num_gen_n, basekV_n, bustype_n
         ],
         axis=1
     )
@@ -219,27 +221,31 @@ def _parse_and_aggregate_datapoint(
             Y_re_e, Y_im_e, Yc_ij_re_e, Yc_ij_im_e, Yc_ijR_re_e,
             Yc_ijR_im_e, su_e, vangl_e, vangu_e, T_mag_e, T_ang_e
         ],
-        axis = 1
+        axis=1
     )
 
     # Generator feature matrix
     x_gen = np.stack(
         [
-            Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g
+            Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g,
+            gen_bus_g
         ],
         axis=1
     )
 
-    # Edge index (undirected: cat forward + backward)
-    ei_np = np.concatenate((ij_e, ijR_e), axis=0)
-    edge_index = ei_np.astype(np.int64)
+    # Grid feature matrix
+    x_grid = np.stack(
+        [
+            baseMVA, n, n_e, n_g
+        ]
+    )
 
     return {
         "x_node": x_node,
         "x_edge": x_edge,
         "x_gen": x_gen,
-        "edge_index": edge_index,
-        "grid_attr": grid_attr,
+        "x_grid": x_grid,
+        "edge_index": ij_e,
     }
 
 
@@ -247,34 +253,38 @@ def _load_multiple_grids(
     local_dir: str, 
     grid_list: list[str], 
     data_frac: float,
-    max_workers: int
+    max_workers: int,
+    seed: int
 ) -> dict:
-    """Collect and parallel-load JSON data from all grids in grid_list."""
+    """
+    Collect and parallel-load JSON data from all grids in grid_list.
+    
+    """
     all_json_paths = []
     for gridname in grid_list:
         path_grid = os.path.join(local_dir, gridname)
         group_list = [
             g for g in os.listdir(path_grid) if g.startswith('group')
         ]
-        random.shuffle(group_list)
+        random.Random(seed).shuffle(group_list)
         for group in group_list:
             path_group = os.path.join(path_grid, group)
             json_list = [
                 fname for fname in os.listdir(path_group)
                 if fname.endswith('.json')
             ]
-            random.shuffle(json_list)
+            random.Random(seed).shuffle(json_list)
             n_sample_files = math.ceil(len(json_list) * data_frac)
             json_list = json_list[:n_sample_files]
             for fname in json_list:
                 all_json_paths.append(os.path.join(path_group, fname))
 
-    random.shuffle(all_json_paths)
+    random.Random(seed).shuffle(all_json_paths)
 
     combined_dataset = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(_read_json, fpath) for fpath in all_json_paths]
-        for f in as_completed(futures):
+        fut = [executor.submit(_read_json, fpath) for fpath in all_json_paths]
+        for f in as_completed(fut):
             data_part = f.result()  # Dict from a single file
             combined_dataset.update(data_part)
 
@@ -292,7 +302,6 @@ def _set_nodelevel_values(
     load_buses: dict, 
     shunt_buses: int
 ) -> Tuple:
-    """ """
     Sd_re_n = np.zeros(n, dtype=np_dtype)
     Sd_im_n = np.zeros(n, dtype=np_dtype)
     Ys_re_n = np.zeros(n, dtype=np_dtype)
@@ -451,19 +460,19 @@ def _set_edgelevel_values(
         su_e[idx]   = line_vals[6]
 
     # transformers
-    for transf_vals in datapoint_dict['grid']['edges']['transformer']['features']:
+    for tran_vals in datapoint_dict['grid']['edges']['transformer']['features']:
         idx += 1
-        vangl_e[idx]     = transf_vals[0]
-        vangu_e[idx]     = transf_vals[1]
-        r = transf_vals[2]
-        x = transf_vals[3]
+        vangl_e[idx]     = tran_vals[0]
+        vangu_e[idx]     = tran_vals[1]
+        r = tran_vals[2]
+        x = tran_vals[3]
         Y_re_e[idx] = r / (r**2 + x**2)
         Y_im_e[idx] = -x / (r**2 + x**2)
-        su_e[idx]   = transf_vals[4]
-        T_mag_e[idx] = transf_vals[7]
-        T_ang_e[idx] = transf_vals[8]
-        Yc_ij_im_e[idx]  = transf_vals[9]
-        Yc_ijR_im_e[idx] = transf_vals[10]
+        su_e[idx]   = tran_vals[4]
+        T_mag_e[idx] = tran_vals[7]
+        T_ang_e[idx] = tran_vals[8]
+        Yc_ij_im_e[idx]  = tran_vals[9]
+        Yc_ijR_im_e[idx] = tran_vals[10]
 
     # Convert Y from rectangular to polar
     Y_mag_e, Y_ang_e = _rectangle_to_polar(Y_re_e, Y_im_e)
@@ -498,8 +507,8 @@ def _set_edgelevel_values(
 
 def _rectangle_to_polar(X_re, X_im):
     """
-    Transform from rectangular to polar form, skipping zero-div by a small offset.
-    This version stays in NumPy by default; we only convert to Torch if needed.
+    Transform from rectangular to polar, avoiding zero-div by a small offset.
+
     """
     small_number = 1.e-10
 
@@ -513,12 +522,10 @@ def _rectangle_to_polar(X_re, X_im):
 def _to_numpy_dict(data_dict: dict):
     """
     Convert each array-like or scalar in data_dict.
+
     """
     for key, value in data_dict.items():
-        if isinstance(value, np.ndarray):
-            # We assume it's already np, maybe ensure float64 or int
-            pass
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             data_dict[key] = np.array([value], dtype=np_dtype)
 
     return data_dict

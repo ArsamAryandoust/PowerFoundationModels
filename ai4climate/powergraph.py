@@ -2,7 +2,6 @@
 import os
 import gc
 import json
-import torch
 import logging
 from typing import Dict, Any, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,11 +9,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import dataset_utils
 
-# list of grid names
-ALL_GRIDS_LIST = ['ieee24', 'ieee39', 'ieee118', 'uk']
+ALL_GRIDS_LIST = [
+    'ieee24', 
+    'ieee39', 
+    'ieee118', 
+    'uk'
+]
 
-# train validation testing ratio
-SPLIT_RATIO = (0.5, 0.1, 0.4)
+SPLIT_RATIO = (0.5, 0.1, 0.4) # train, val, test
+
+# Set default dtypes
+np_dtype = np.float64
 
 
 def load(
