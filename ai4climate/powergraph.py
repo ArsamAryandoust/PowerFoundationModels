@@ -2,12 +2,13 @@
 import os
 import gc
 import json
+import torch
 import logging
 from typing import Dict, Any, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import numpy as np
 import dataset_utils
-
 
 # list of grid names
 ALL_GRIDS_LIST = ['ieee24', 'ieee39', 'ieee118', 'uk']
@@ -54,6 +55,10 @@ def _parse_dataset(
 ) -> Dict[str, Any]:
     """ """
 
+    ###
+    # Parse labels 
+    ###
+
     if subtask_name == 'cascading_failure_binary':
         for entry in data_dict.values():
             entry['labels'] = entry['labels']['1']
@@ -70,6 +75,47 @@ def _parse_dataset(
         for entry in data_dict.values():
             entry['labels'] = entry['labels']['4']
             
+
+    ###
+    # Parse features 
+    ###
+
+    for entry in data_dict.values():
+        ### Parse nodes
+        # retrieve data
+        pnet    = entry['nodes']['1']    
+        snet    = entry['nodes']['2']
+        v       = entry['nodes']['3']
+        # delete entry
+        del entry['nodes']
+        # write x_node as concatenation of entires
+        entry['x_node'] = np.stack(
+            [pnet, snet, v],
+            axis=1
+        )
+
+        ### Parse edges
+        # retrieve data. Note: 1-4 are from Ef_nc, and 5-8 are from Ef. Use 5-8.
+        pij     = entry['edges']['5']    
+        qij     = entry['edges']['6']
+        xij     = entry['edges']['7']
+        lrij    = entry['edges']['8']
+        # delete entry
+        del entry['edges']
+        # write x_node as concatenation of entires
+        entry['x_edge'] = np.stack(
+            [pij, qij, xij, lrij], 
+            axis=1
+        )
+
+        ### Parse edge index
+        from_node   = entry['edge_index']['1']
+        to_node     = entry['edge_index']['2']
+        entry['edge_index'] = np.stack(
+            [from_node, to_node],
+            axis= 1
+        )
+
     return data_dict
 
 
