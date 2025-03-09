@@ -27,7 +27,11 @@ Available sub-tasks are:
 
 ## Download raw data
 
-You can download the raw OPFData datasets using Pytorch Geometric.
+You can download the raw OPFData datasets using Pytorch Geometric, or a Google 
+Cloud bucket under
+https://console.cloud.google.com/storage/browser/gridopt-dataset/ where the data 
+is stored.
+
 
 ```python
 !pip install pyg-nightly # Only necessary until PyG 2.6.0 is released.
