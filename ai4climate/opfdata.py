@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import dataset_utils
 
-
 SMALL_GRIDS_LIST = [
     'pglib_opf_case14_ieee',
     'pglib_opf_case30_ieee',
@@ -45,9 +44,8 @@ def load(
 ):
     """
     Load out-of-distribution benchmark by merging grids in one pass.
-    
     """
-    ### 1) Determine which grids to load
+    # 1) Determine which grids to load
     if subtask_name.startswith('train_small'):
         train_grids = SMALL_GRIDS_LIST
     elif subtask_name.startswith('train_medium'):
@@ -66,16 +64,12 @@ def load(
     else:
         raise ValueError(f"Unknown subtask_name: {subtask_name}")
 
-    ### 2) Load train/val
-
-    # load data
+    # 2) Load train/val
     train_val_dataset = _load_multiple_grids(local_dir, train_grids, data_frac, 
         max_workers, seed)
-
-    # shuffle
     train_val_dataset = dataset_utils.shuffle_datadict(train_val_dataset, seed)
 
-    # determine split sizes
+    # Determine split sizes
     total_size = len(train_val_dataset)
     split_normalize = SPLIT_RATIO[0] + SPLIT_RATIO[1]
     train_ratio = SPLIT_RATIO[0] / split_normalize
@@ -83,43 +77,39 @@ def load(
     size_train = int(total_size * train_ratio)
     size_val = int(total_size * val_ratio)
 
-    # determine split IDs
-    end_train_id    = int(size_train * train_frac)
-    start_val_id    = size_train
-    end_val_id      = size_train + size_val
+    # Determine split IDs
+    end_train_id = int(size_train * train_frac)
+    start_val_id = size_train
+    end_val_id   = size_train + size_val
 
-    # transform dictionary items to list
+    # Transform dictionary items to list
     train_val_dataset = list(train_val_dataset.items())
 
-    # slice list
+    # Slice list
     train_dataset = dict(train_val_dataset[:end_train_id])
     val_dataset = dict(train_val_dataset[start_val_id:end_val_id])
     del train_val_dataset
     gc.collect()
 
-    ### 3) Load test
-
-    # load data
+    # 3) Load test
     test_dataset = _load_multiple_grids(local_dir, test_grids, data_frac, 
         max_workers, seed)
-
-    # shuffle
     test_dataset = dataset_utils.shuffle_datadict(test_dataset, seed)
 
-    # determine split size
+    # Determine split size
     total_size = len(test_dataset)
     size_test = int(total_size * SPLIT_RATIO[2])
 
-    # transform to list and slice, then transform back to dict
+    # Transform to list and slice, then transform back to dict
     test_dataset = list(test_dataset.items())[:size_test]
     test_dataset = dict(test_dataset)
 
-    ### 4) Parse data
+    # 4) Parse data
     train_dataset = _parse_data(train_dataset)
     val_dataset   = _parse_data(val_dataset)
     test_dataset  = _parse_data(test_dataset)
 
-    ### 5) Problem functions
+    # 5) Problem functions
     loss_functions = {
         'obj_gen_cost': obj_gen_cost,
         'eq_pbalance_re': eq_pbalance_re,
@@ -129,46 +119,32 @@ def load(
         'eq_difference': eq_difference
     }
 
-    ### 6) Return task data dictionary
+    # 6) Return task data dictionary
     subtask_data = {
         'train_data': train_dataset,
         'val_data': val_dataset,
         'test_data': test_dataset,
         'loss_functions': loss_functions,
     }
-
     return subtask_data
 
 
 def _parse_data(dataset_dict: dict) -> list:
     """ 
     Iterate over dataset dictionary, parse data points and add to data list
-
     """
-    # empty list to fill
     data_list = []
-
-    # iterate over dictionary
     for i in range(len(dataset_dict)):
-        # pop item and maintain value only.
+        # popitem removes an arbitrary (key, value) pair
         _, value = dataset_dict.popitem()
-
-        # parse value
         value = _parse_and_aggregate_datapoint(value, i_data=i)
-
-        # add to data list
         data_list.append(value)
-
     return data_list
 
 
-def _parse_and_aggregate_datapoint(
-    datapoint_dict: dict, 
-    i_data: int
-) -> dict:
+def _parse_and_aggregate_datapoint(datapoint_dict: dict, i_data: int) -> dict:
     """
     Parse data dictionary into features, return Numpy structures.
-    
     """
     # Some dimension metadata
     baseMVA = datapoint_dict['grid']['context'][0][0][0]
@@ -184,33 +160,31 @@ def _parse_and_aggregate_datapoint(
     gen_buses = datapoint_dict['grid']['edges']['generator_link']['receivers']
 
     # --- Node-level ---
-    (
-        Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, basekV_n, vl_n, vu_n, va_init_n, 
-        ref_node_n, bustype_n, ref_bus, ref_count, vang_low_n, vang_up_n
-    ) = _set_nodelevel_values(n, datapoint_dict, load_buses, shunt_buses)
+    (Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, basekV_n, vl_n, vu_n, bustype_n) = _set_nodelevel_values(
+        n, datapoint_dict, load_buses, shunt_buses
+    )
 
     # --- Gen-level ---
     (
         Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g,
-        pg_init_g, qg_init_g, gen_bus_g, ref_gen_list, vm_init_n, Sgl_re_n,
-        Sgl_im_n, Sgu_re_n, Sgu_im_n, c0g_n, c1g_n, c2g_n, num_gen_n
-    ) = _set_generatorlevel_values(n, n_g, datapoint_dict, gen_buses, 
-        ref_bus)
+        pg_init_g, qg_init_g, gen_bus_g, Sgl_re_n, Sgl_im_n, Sgu_re_n,
+        Sgu_im_n, c0g_n, c1g_n, c2g_n, num_gen_n
+    ) = _set_generatorlevel_values(n, n_g, datapoint_dict, gen_buses)
 
     # --- Edge-level ---
     (
-        ij_e, ijR_e, Y_re_e, Y_im_e, Yc_ij_im_e, Yc_ijR_im_e, T_mag_e,
-        T_ang_e, su_e, vangl_e, vangu_e, Yc_ij_re_e, Yc_ijR_re_e, 
-        Y_re_n, Y_im_n, sang_low_e, sang_up_e, suR_e, Y_mag_e, Y_ang_e
+        ij_e, Y_re_e, Y_im_e, Yc_ij_im_e, Yc_ijR_im_e, T_mag_e, T_ang_e, su_e,
+        vangl_e, vangu_e, Yc_ij_re_e, Yc_ijR_re_e, Y_re_n, Y_im_n, Y_mag_e, Y_ang_e
     ) = _set_edgelevel_values(n_e, datapoint_dict, Ys_re_n, Ys_im_n)
-
 
     # Node feature matrix
     x_node = np.stack(
         [
-            Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, Y_re_n, Y_im_n,
-            Sgl_re_n, Sgl_im_n, Sgu_re_n, Sgu_im_n, vl_n, vu_n,
-            c0g_n, c1g_n, c2g_n, num_gen_n, basekV_n, bustype_n
+            Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, 
+            Y_re_n, Y_im_n, Sgl_re_n, Sgl_im_n,
+            Sgu_re_n, Sgu_im_n, vl_n, vu_n,
+            c0g_n, c1g_n, c2g_n, num_gen_n,
+            basekV_n, bustype_n
         ],
         axis=1
     )
@@ -218,8 +192,9 @@ def _parse_and_aggregate_datapoint(
     # Edge feature matrix
     x_edge = np.stack(
         [
-            Y_re_e, Y_im_e, Yc_ij_re_e, Yc_ij_im_e, Yc_ijR_re_e,
-            Yc_ijR_im_e, su_e, vangl_e, vangu_e, T_mag_e, T_ang_e
+            Y_re_e, Y_im_e, Yc_ij_re_e, Yc_ij_im_e,
+            Yc_ijR_re_e, Yc_ijR_im_e, su_e, vangl_e,
+            vangu_e, T_mag_e, Y_ang_e
         ],
         axis=1
     )
@@ -227,18 +202,14 @@ def _parse_and_aggregate_datapoint(
     # Generator feature matrix
     x_gen = np.stack(
         [
-            Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g,
-            gen_bus_g
+            Sl_re_g, Sl_im_g, Su_re_g, Su_im_g,
+            c0_g, c1_g, c2_g, mbase_g, gen_bus_g
         ],
         axis=1
     )
 
     # Grid feature matrix
-    x_grid = np.stack(
-        [
-            baseMVA, n, n_e, n_g
-        ]
-    )
+    x_grid = np.stack([baseMVA, n, n_e, n_g])
 
     return {
         "x_node": x_node,
@@ -258,34 +229,32 @@ def _load_multiple_grids(
 ) -> dict:
     """
     Collect and parallel-load JSON data from all grids in grid_list.
-    
     """
+    rng = random.Random(seed)
     all_json_paths = []
+
     for gridname in grid_list:
         path_grid = os.path.join(local_dir, gridname)
-        group_list = [
-            g for g in os.listdir(path_grid) if g.startswith('group')
-        ]
-        random.Random(seed).shuffle(group_list)
+        group_list = [g for g in os.listdir(path_grid) if g.startswith('group')]
+        rng.shuffle(group_list)
+
         for group in group_list:
             path_group = os.path.join(path_grid, group)
-            json_list = [
-                fname for fname in os.listdir(path_group)
-                if fname.endswith('.json')
-            ]
-            random.Random(seed).shuffle(json_list)
+            json_list = [fname for fname in os.listdir(path_group) if fname.endswith('.json')]
+            rng.shuffle(json_list)
+
             n_sample_files = math.ceil(len(json_list) * data_frac)
             json_list = json_list[:n_sample_files]
             for fname in json_list:
                 all_json_paths.append(os.path.join(path_group, fname))
 
-    random.Random(seed).shuffle(all_json_paths)
+    rng.shuffle(all_json_paths)
 
     combined_dataset = {}
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        fut = [executor.submit(_read_json, fpath) for fpath in all_json_paths]
-        for f in as_completed(fut):
-            data_part = f.result()  # Dict from a single file
+        futures = [executor.submit(_read_json, fpath) for fpath in all_json_paths]
+        for f in as_completed(futures):
+            data_part = f.result()
             combined_dataset.update(data_part)
 
     return combined_dataset
@@ -308,49 +277,36 @@ def _set_nodelevel_values(
     Ys_im_n = np.zeros(n, dtype=np_dtype)
     vl_n    = np.zeros(n, dtype=np_dtype)
     vu_n    = np.zeros(n, dtype=np_dtype)
-    ref_node_n = np.ones(n, dtype=np.intc)
     bustype_n  = np.zeros(n, dtype=np.intc)
     basekV_n   = np.zeros(n, dtype=np.intc)
-    va_init_n  = np.zeros(n, dtype=np_dtype)
 
-    ref_bus = None
-    ref_count = 0
-
+    # Fill node values
     for idx, values in enumerate(datapoint_dict['grid']['nodes']['bus']):
         basekV_n[idx]  = values[0]
         bustype_n[idx] = values[1]  # PQ(1), PV(2), REF(3), etc.
         vl_n[idx]      = values[2]  # p.u.
         vu_n[idx]      = values[3]
-        if bustype_n[idx] == 3:  # reference bus
-            ref_node_n[idx] = 0
-            ref_bus = idx
-            ref_count += 1
-    
+
+    # Load data
     for idx, values in enumerate(datapoint_dict['grid']['nodes']['load']):
         Sd_re_n[load_buses[idx]] += values[0]
         Sd_im_n[load_buses[idx]] += values[1]
-        
+
+    # Shunt data
     for idx, values in enumerate(datapoint_dict['grid']['nodes']['shunt']):
         Ys_im_n[shunt_buses[idx]] += values[0]
         Ys_re_n[shunt_buses[idx]] += values[1]
-        
-    vang_low_n = -np.pi / 2 * np.ones((n), dtype=np_dtype)
-    vang_up_n  =  np.pi / 2 * np.ones((n), dtype=np_dtype)
 
-    return (
-        Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, basekV_n, vl_n, vu_n, va_init_n, 
-        ref_node_n, bustype_n, ref_bus, ref_count, vang_low_n, vang_up_n
-    )
+    return (Sd_re_n, Sd_im_n, Ys_re_n, Ys_im_n, basekV_n, vl_n, vu_n, bustype_n)
 
 
 def _set_generatorlevel_values(
-    n, 
-    n_g, 
-    datapoint_dict, 
-    generator_buses, 
-    ref_bus
+    n: int, 
+    n_g: int, 
+    datapoint_dict: dict, 
+    generator_buses: list
 ) -> Tuple:
-    vm_init_n  = np.ones(n, dtype=np_dtype)
+    # Accumulate generator constraints at node level
     Sgl_re_n   = np.zeros(n, dtype=np_dtype)
     Sgl_im_n   = np.zeros(n, dtype=np_dtype)
     Sgu_re_n   = np.zeros(n, dtype=np_dtype)
@@ -360,6 +316,7 @@ def _set_generatorlevel_values(
     c2g_n      = np.zeros(n, dtype=np_dtype)
     num_gen_n  = np.zeros(n, dtype=np.intc)
 
+    # Generator-level arrays
     Sl_re_g = np.zeros(n_g, dtype=np_dtype)
     Sl_im_g = np.zeros(n_g, dtype=np_dtype)
     Su_re_g = np.zeros(n_g, dtype=np_dtype)
@@ -372,7 +329,6 @@ def _set_generatorlevel_values(
     qg_init_g = np.zeros(n_g, dtype=np_dtype)
 
     gen_bus_g = np.array(generator_buses, dtype=np.intc)
-    ref_gen_list = []
 
     for idx, values in enumerate(datapoint_dict['grid']['nodes']['generator']):
         mbase_g[idx]   = values[0]
@@ -382,21 +338,17 @@ def _set_generatorlevel_values(
         qg_init_g[idx] = values[4]
         Sl_im_g[idx]   = values[5]
         Su_im_g[idx]   = values[6]
-        vm_init_n[gen_bus_g[idx]] = values[7]
+        # values[7] is vm_init_n, unused here
         c2_g[idx]      = values[8]
         c1_g[idx]      = values[9]
         c0_g[idx]      = values[10]
-
-        if gen_bus_g[idx] == ref_bus:
-            ref_gen_list.append(idx)
-
-    ref_gen_list = np.array(ref_gen_list, dtype=np.intc)
 
     for gen_id, node_id in enumerate(gen_bus_g):
         Sgl_re_n[node_id] += Sl_re_g[gen_id]
         Sgl_im_n[node_id] += Sl_im_g[gen_id]
         Sgu_re_n[node_id] += Su_re_g[gen_id]
         Sgu_im_n[node_id] += Su_im_g[gen_id]
+        # Notice c2_g, c1_g, c0_g are being reversed on purpose.
         c0g_n[node_id]    += c2_g[gen_id]
         c1g_n[node_id]    += c1_g[gen_id]
         c2g_n[node_id]    += c0_g[gen_id]
@@ -404,29 +356,28 @@ def _set_generatorlevel_values(
 
     return (
         Sl_re_g, Sl_im_g, Su_re_g, Su_im_g, c0_g, c1_g, c2_g, mbase_g,
-        pg_init_g, qg_init_g, gen_bus_g, ref_gen_list, vm_init_n,
-        Sgl_re_n, Sgl_im_n, Sgu_re_n, Sgu_im_n, c0g_n, c1g_n, c2g_n,
-        num_gen_n
+        pg_init_g, qg_init_g, gen_bus_g,
+        Sgl_re_n, Sgl_im_n, Sgu_re_n, Sgu_im_n, c0g_n, c1g_n, c2g_n, num_gen_n
     )
 
 
 def _set_edgelevel_values(
-    n_e, 
-    datapoint_dict, 
-    Ys_re_n, 
-    Ys_im_n
+    n_e: int, 
+    datapoint_dict: dict, 
+    Ys_re_n: np.ndarray, 
+    Ys_im_n: np.ndarray
 ) -> Tuple:
-    # line buses
+    # Line buses
     ij_line = np.column_stack(
         (
-            datapoint_dict['grid']['edges']['ac_line']['senders'], 
+            datapoint_dict['grid']['edges']['ac_line']['senders'],
             datapoint_dict['grid']['edges']['ac_line']['receivers']
         )
     )
-    # transformer buses
+    # Transformer buses
     ij_transformer = np.column_stack(
         (
-            datapoint_dict['grid']['edges']['transformer']['senders'], 
+            datapoint_dict['grid']['edges']['transformer']['senders'],
             datapoint_dict['grid']['edges']['transformer']['receivers']
         )
     )
@@ -442,10 +393,11 @@ def _set_edgelevel_values(
     vangl_e = np.zeros(n_e, dtype=np_dtype)
     vangu_e = np.zeros(n_e, dtype=np_dtype)
 
-    Yc_ij_re_e  = np.zeros(n_e, dtype=np_dtype)
+    # For completeness, these arrays remain but are not explicitly filled:
+    Yc_ij_re_e = np.zeros(n_e, dtype=np_dtype)
     Yc_ijR_re_e = np.zeros(n_e, dtype=np_dtype)
 
-    # lines
+    # Fill line features
     idx = -1
     for line_vals in datapoint_dict['grid']['edges']['ac_line']['features']:
         idx += 1
@@ -455,30 +407,29 @@ def _set_edgelevel_values(
         Yc_ijR_im_e[idx] = line_vals[3]
         r = line_vals[4]
         x = line_vals[5]
-        Y_re_e[idx] = r / (r**2 + x**2)
-        Y_im_e[idx] = -x / (r**2 + x**2)
+        denom = r**2 + x**2
+        Y_re_e[idx] = r / denom
+        Y_im_e[idx] = -x / denom
         su_e[idx]   = line_vals[6]
 
-    # transformers
+    # Fill transformer features
     for tran_vals in datapoint_dict['grid']['edges']['transformer']['features']:
         idx += 1
         vangl_e[idx]     = tran_vals[0]
         vangu_e[idx]     = tran_vals[1]
         r = tran_vals[2]
         x = tran_vals[3]
-        Y_re_e[idx] = r / (r**2 + x**2)
-        Y_im_e[idx] = -x / (r**2 + x**2)
+        denom = r**2 + x**2
+        Y_re_e[idx] = r / denom
+        Y_im_e[idx] = -x / denom
         su_e[idx]   = tran_vals[4]
         T_mag_e[idx] = tran_vals[7]
         T_ang_e[idx] = tran_vals[8]
         Yc_ij_im_e[idx]  = tran_vals[9]
         Yc_ijR_im_e[idx] = tran_vals[10]
 
-    # Convert Y from rectangular to polar
+    # Convert Y to polar
     Y_mag_e, Y_ang_e = _rectangle_to_polar(Y_re_e, Y_im_e)
-
-    # Reverse edge indices
-    ijR_e = ij_e[:, [1, 0]]
 
     # Build up node admittance
     Y_re_n_new = Ys_re_n.copy()
@@ -491,43 +442,31 @@ def _set_edgelevel_values(
         Y_im_n_new[i_node] += Y_im_e[branch_k]
         Y_im_n_new[j_node] += Y_im_e[branch_k]
 
-    sang_low_e = -np.pi / 2 * np.ones(n_e, dtype=np_dtype)
-    sang_up_e  =  np.pi / 2 * np.ones(n_e, dtype=np_dtype)
-
-    # same forward / reverse limit
-    suR_e = su_e.copy()
-
     return (
-        ij_e, ijR_e, Y_re_e, Y_im_e, Yc_ij_im_e, Yc_ijR_im_e, T_mag_e,
-        T_ang_e, su_e, vangl_e, vangu_e, Yc_ij_re_e, Yc_ijR_re_e, 
-        Y_re_n_new, Y_im_n_new, sang_low_e, sang_up_e, suR_e,
-        Y_mag_e, Y_ang_e
+        ij_e, Y_re_e, Y_im_e, Yc_ij_im_e, Yc_ijR_im_e,
+        T_mag_e, T_ang_e, su_e, vangl_e, vangu_e,
+        Yc_ij_re_e, Yc_ijR_re_e, Y_re_n_new, Y_im_n_new, Y_mag_e, Y_ang_e
     )
 
 
 def _rectangle_to_polar(X_re, X_im):
     """
     Transform from rectangular to polar, avoiding zero-div by a small offset.
-
     """
     small_number = 1.e-10
-
-    # We can do the calculation in NumPy first:
     X_mag_np = np.sqrt(X_re**2 + X_im**2)
+    # Keep user logic: avoid pure arctan2
     X_ang_np = np.arctan(X_im / (X_re + small_number))
-
     return X_mag_np, X_ang_np
 
 
 def _to_numpy_dict(data_dict: dict):
     """
     Convert each array-like or scalar in data_dict.
-
     """
     for key, value in data_dict.items():
         if isinstance(value, (int, float)):
             data_dict[key] = np.array([value], dtype=np_dtype)
-
     return data_dict
 
 
