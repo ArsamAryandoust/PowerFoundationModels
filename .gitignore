@@ -1,3 +1,6 @@
+
+.pypirc
+.pypirc_test
 pyproject.toml
 setup.cfg
 somenotes
