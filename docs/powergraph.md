@@ -1,6 +1,6 @@
 # PowerGraph
 
-## Load task dataset
+## Load standardized task data
 
 You can both download and load all data associated with standardized PowerGraph tasks
 in the following fashion. For example, load the train_small_test_medium sub-task

@@ -2,18 +2,23 @@
 import os
 import gc
 import json
+import random
 import logging
-from typing import Dict, Any, Tuple, Union
+from typing import Dict, Any, Tuple, Union, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import numpy as np
 import dataset_utils
 
+ALL_GRIDS_LIST = [
+    'ieee24', 
+    'ieee39', 
+    'ieee118', 
+    'uk'
+]
 
-# list of grid names
-ALL_GRIDS_LIST = ['ieee24', 'ieee39', 'ieee118', 'uk']
-
-# train validation testing ratio
-SPLIT_RATIO = (0.5, 0.1, 0.4)
+SPLIT_RATIO = (0.5, 0.1, 0.4)  # train, val, test
+np_dtype = np.float64  # Set default dtypes
 
 
 def load(
@@ -22,20 +27,22 @@ def load(
     data_frac: Union[int, float],
     train_frac: Union[int, float],
     max_workers: int,
-) -> Dict[str, Dict[str, Any]]:
-    """Load and prepare the data for a given subtask."""
-
-    # load json files
+    seed: int = None
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Load and prepare the data for a given subtask.
+    """
+    # Load JSON files
     data_dict = _load_json_files(local_dir, data_frac, max_workers=max_workers)
 
-    # parse into subtask datasets
-    data_dict = _parse_dataset(data_dict, subtask_name)
+    # Parse into subtask datasets
+    data_list = _parse_dataset(data_dict, subtask_name)
 
-    # shuffle data 
-    data_dict = dataset_utils.shuffle_datadict(data_dict)
+    # Shuffle data
+    random.Random(seed).shuffle(data_list)
 
-    # split into training, validation and testing
-    train_data, val_data, test_data = _split_dataset(data_dict, train_frac)
+    # Split into training, validation, and testing
+    train_data, val_data, test_data = _split_dataset(data_list, train_frac)
 
     # Clean up large dictionary to free memory
     del data_dict
@@ -51,57 +58,125 @@ def load(
 def _parse_dataset(
     data_dict: Dict[str, Any], 
     subtask_name: str
+) -> List[Dict[str, Any]]:
+    """
+    Parse data dictionary by subtask name, extracting and transforming nodes,
+    edges, edge_index, and labels as required. Returns a list of parsed samples.
+    """
+
+    # Map each subtask_name to the needed label key
+    subtask_label_map = {
+        'cascading_failure_binary': '1',
+        'cascading_failure_multiclass': '2',
+        'demand_not_served': '3',
+        'cascading_failure_sequence': '4'
+    }
+    if subtask_name not in subtask_label_map:
+        raise ValueError(f"Unknown subtask name: {subtask_name}")
+
+    label_key = subtask_label_map[subtask_name]
+    for entry in data_dict.values():
+        entry['labels'] = entry['labels'][label_key]
+
+    data_list = []
+    for _ in range(len(data_dict)):
+        # popitem removes an arbitrary (key, value) pair
+        _, entry = data_dict.popitem()
+
+        # --- Parse nodes ---
+        pnet = entry['nodes']['1']
+        snet = entry['nodes']['2']
+        v = entry['nodes']['3']
+        x_node = np.stack([pnet, snet, v], axis=1)
+
+        # --- Parse edges ---
+        # Note: 1-4 are from Ef_nc, 5-8 are from Ef; here we use 5-8.
+        pij = entry['edges']['5']
+        qij = entry['edges']['6']
+        xij = entry['edges']['7']
+        lrij = entry['edges']['8']
+        x_edge = np.stack([pij, qij, xij, lrij], axis=1)
+
+        # --- Parse edge index ---
+        from_node = entry['edge_index']['1']
+        to_node   = entry['edge_index']['2']
+        edge_index = np.stack([from_node, to_node], axis=1)
+
+        labels = entry['labels']
+        data_list.append(
+            {
+                'x_node': x_node,
+                'x_edge': x_edge,
+                'edge_index': edge_index,
+                'labels': labels
+            }
+        )
+
+    return data_list
+
+
+def _backupfunction(
+    data_dict: Dict[str, Any], 
+    subtask_name: str
 ) -> Dict[str, Any]:
-    """ """
+    """
+    Backup function for parsing data in-place. Not used in the primary workflow.
+    """
+    for entry in data_dict.values():
+        # --- Parse nodes ---
+        pnet = entry['nodes']['1']
+        snet = entry['nodes']['2']
+        v    = entry['nodes']['3']
+        del entry['nodes']
+        entry['x_node'] = np.stack([pnet, snet, v], axis=1)
 
-    if subtask_name == 'cascading_failure_binary':
-        for entry in data_dict.values():
+        # --- Parse edges ---
+        pij  = entry['edges']['5']
+        qij  = entry['edges']['6']
+        xij  = entry['edges']['7']
+        lrij = entry['edges']['8']
+        del entry['edges']
+        entry['x_edge'] = np.stack([pij, qij, xij, lrij], axis=1)
+
+        # --- Parse edge index ---
+        from_node = entry['edge_index']['1']
+        to_node   = entry['edge_index']['2']
+        entry['edge_index'] = np.stack([from_node, to_node], axis=1)
+
+        # Parse labels similarly (same logic as in _parse_dataset).
+        if subtask_name == 'cascading_failure_binary':
             entry['labels'] = entry['labels']['1']
-    
-    elif subtask_name == 'cascading_failure_multiclass':
-        for entry in data_dict.values():
+        elif subtask_name == 'cascading_failure_multiclass':
             entry['labels'] = entry['labels']['2']
-
-    elif subtask_name == 'demand_not_served':
-        for entry in data_dict.values():
+        elif subtask_name == 'demand_not_served':
             entry['labels'] = entry['labels']['3']
-
-    elif subtask_name == 'cascading_failure_sequence':
-        for entry in data_dict.values():
+        elif subtask_name == 'cascading_failure_sequence':
             entry['labels'] = entry['labels']['4']
-            
+
     return data_dict
 
 
 def _split_dataset(
-    data_dict: Dict[str, Any],
+    data_list: List[Dict[str, Any]],
     train_frac: float
-) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Split the dataset into train, validation, and test sets, based on 
-    SPLIT_RATIO. Then within the train-slice, only a fraction (train_frac) is 
-    used for actual training, discarding the remainder of the 'train slice'.
-
+    Split the dataset into train, validation, and test sets, based on SPLIT_RATIO.
+    Then within the train-slice, only a fraction (train_frac) is used for actual
+    training, discarding the remainder of the 'train slice'.
     """
-    total_size = len(data_dict)
+    total_size = len(data_list)
     size_train = int(total_size * SPLIT_RATIO[0])
-    size_val = int(total_size * SPLIT_RATIO[1])
+    size_val   = int(total_size * SPLIT_RATIO[1])
 
     id_end_train = int(size_train * train_frac)
     id_start_val = size_train
-    id_end_val = size_train + size_val
-
-    # Convert dict to list of (key, value) pairs for slicing
-    items = list(data_dict.items())
-    
-    # Free the original dict from memory
-    del data_dict
-    gc.collect()
+    id_end_val   = size_train + size_val
 
     # Slice the data
-    train_data = dict(items[:id_end_train])
-    val_data = dict(items[id_start_val:id_end_val])
-    test_data = dict(items[id_end_val:])
+    train_data = data_list[:id_end_train]
+    val_data = data_list[id_start_val:id_end_val]
+    test_data = data_list[id_end_val:]
 
     return train_data, val_data, test_data
 
@@ -114,28 +189,23 @@ def _load_json_files(
     """
     Load JSON files from each grid in ALL_GRIDS_LIST, accumulating them into a 
     single dictionary.
-
     """
     combined_data_dict = {}
 
-    # For each grid, load its JSON files into the combined dictionary
     for gridname in ALL_GRIDS_LIST:
         path_grid = os.path.join(local_dir, gridname)
         if not os.path.isdir(path_grid):
             logging.warning(f"Directory '{path_grid}' does not exist, skipped.")
             continue
 
-        # Gather all JSON files
         file_list_grid = [f for f in os.listdir(path_grid) if f.endswith('.json')]
         total_files = len(file_list_grid)
-
         if total_files == 0:
             logging.info(f"No JSON files found in '{path_grid}', skipped.")
             continue
 
-        # compute how many files to load based on data_frac
+        # Determine how many files to load based on data_frac
         num_to_load = int(round(data_frac * total_files))
-
         file_list_grid = file_list_grid[:num_to_load]
         logging.info(f"Loading {num_to_load} files from '{path_grid}'.")
 
@@ -143,7 +213,6 @@ def _load_json_files(
             with open(filename, 'r', encoding='utf-8') as fh:
                 return json.load(fh)
 
-        # Load in parallel
         partial_dicts = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_map = {
