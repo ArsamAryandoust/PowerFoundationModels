@@ -1,3 +1,13 @@
+"""Contains multi-processing functions that pre-process datasets in parallel.
+
+Main entry point to script-wise data pre-processing. 
+
+Example:
+--------
+    
+    $ python powergraph_process.py
+    
+"""
 import os
 import json
 import mat73
