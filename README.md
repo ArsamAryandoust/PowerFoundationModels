@@ -1,6 +1,5 @@
 # AI4Climate: Collection of Machine Learning Tasks and Datasets for Tackling Climate Change
 
-
 ## Overview
 
 1. [Getting started](#getting-started)

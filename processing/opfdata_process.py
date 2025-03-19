@@ -1,14 +1,11 @@
 """Contains multi-processing functions that pre-process datasets in parallel.
 
-Main entry point to script-wise data pre-processing. Contains function that can
-be called individually
-
-
+Main entry point to script-wise data pre-processing. 
 
 Example:
 --------
     
-    $ python process_opfdata.py pglib_opf_case14_ieee regular
+    $ python opfdata_process.py pglib_opf_case14_ieee regular
     
 """
 from multiprocessing import Process
