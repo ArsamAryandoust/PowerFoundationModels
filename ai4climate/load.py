@@ -1,4 +1,16 @@
-"""Main module for loading AI4Climate tasks in standardized format."""
+"""Main module for loading AI4Climate tasks in standardized format.
+
+Example usage:
+--------------
+    from ai4climate import load
+
+    dataset = load(
+        task_name='OPFData', 
+        subtask_name='train_small_test_medium',
+        root_path='~/AI4Climate/'
+    )
+
+"""
 import os
 import sys
 import math
@@ -9,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # individual task loading modules
 import opfdata
 import powergraph
+import solarcube
 
 LIST_AVAIL_TASKNAMES = [
     'OPFData',
@@ -80,6 +93,14 @@ def _load_subtask(
         )
     elif 'PowerGraph' in local_dir:
         subtask_data = powergraph.load(
+            local_dir,
+            subtask_name,
+            data_frac,
+            train_frac,
+            max_workers
+        )
+    elif 'SolarCube' in local_dir:
+        subtask_data = solarcube.load(
             local_dir,
             subtask_name,
             data_frac,
@@ -219,6 +240,7 @@ def _uncompress_and_delete_file(file_path: str):
     Decompress a file (zip/tar/tar.gz) into its directory, then delete 
     the original. If the uncompressed data is already present, skip 
     decompression but still remove the compressed file.
+
     """
     if not os.path.exists(file_path):
         return  # someone else might have deleted it already
@@ -262,6 +284,7 @@ def _guess_uncompressed_dir(compressed_path: str) -> str:
       - .zip    -> strip .zip
       - .tar.gz -> strip .tar.gz
       - .tar    -> strip .tar
+
     """
     # If .tar.gz
     if compressed_path.endswith(".tar.gz"):
