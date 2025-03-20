@@ -31,7 +31,17 @@ LARGE_GRIDS_LIST = [
     'pglib_opf_case13659_pegase'
 ]
 
-SPLIT_RATIO = (0.5, 0.1, 0.4)  # train, val, test
+LIST_AVAIL_SUBTASKNAMES = [
+    'train_small_test_medium',
+    'train_small_test_large',
+    'train_medium_test_small',
+    'train_medium_test_large',
+    'train_large_test_small',
+    'train_large_test_medium',
+]
+
+# train, val, test
+SPLIT_RATIO = (0.5, 0.1, 0.4)
 
 # Set default dtypes
 np_dtype = np.float64
@@ -47,7 +57,12 @@ def load(
 ):
     """
     Load out-of-distribution benchmark by merging grids in one pass.
+
     """
+    # check if valid subtask name is passed
+    if subtask_name not in LIST_AVAIL_SUBTASKNAMES:
+        raise ValueError(f"Unknown subtask_name: {subtask_name}")
+
     # 1) Determine which grids to load
     if subtask_name.startswith('train_small'):
         train_grids = SMALL_GRIDS_LIST
@@ -55,8 +70,6 @@ def load(
         train_grids = MEDIUM_GRIDS_LIST
     elif subtask_name.startswith('train_large'):
         train_grids = LARGE_GRIDS_LIST
-    else:
-        raise ValueError(f"Unknown subtask_name: {subtask_name}")
 
     if subtask_name.endswith('test_small'):
         test_grids = SMALL_GRIDS_LIST
@@ -64,8 +77,7 @@ def load(
         test_grids = MEDIUM_GRIDS_LIST
     elif subtask_name.endswith('test_large'):
         test_grids = LARGE_GRIDS_LIST
-    else:
-        raise ValueError(f"Unknown subtask_name: {subtask_name}")
+
 
     # 2) Load train/val
     train_val_dataset = _load_multiple_grids(local_dir, train_grids, data_frac, 
