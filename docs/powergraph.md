@@ -23,7 +23,7 @@ Available sub-tasks are:
 - `cascading_failure_sequence`
 
 
-## Download raw data
+## Download raw task data
 
 You can download the raw PowerGraph datasets from 
 https://figshare.com/articles/dataset/PowerGraph/22820534. The download can be
