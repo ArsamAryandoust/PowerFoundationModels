@@ -32,3 +32,4 @@ dataset = load_task(
 
 1. [OPFData](docs/opfdata.md)
 2. [PowerGraph](docs/powergraph.md)
+3. [SolarCube](docs/solarcube.md)
