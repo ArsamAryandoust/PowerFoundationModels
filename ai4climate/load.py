@@ -38,8 +38,10 @@ def load_task(
     max_workers: int = 1024,
     max_workers_download: int = 4
 ) -> dict:
-    """Download task repository (if needed) and load standardized subtask."""
-
+    """
+    Download task repository (if needed) and load standardized subtask.
+    
+    """
     # validate input arguments
     _validate_inputs(
         task_name, 
@@ -81,8 +83,11 @@ def _load_subtask(
     train_frac: int,
     max_workers: int
 ) -> dict:
-    """Load standardized task."""
-    print(f"Preparing subtask '{subtask_name}'...")
+    """
+    Load standardized task.
+    
+    """
+    print(f"Preparing subtask {subtask_name}")
     if 'OPFData' in local_dir:
         subtask_data = opfdata.load(
             local_dir, 
@@ -126,8 +131,9 @@ def _download_hf_repo(
     download where files or final uncompressed data already exist, and skipping 
     decompression if data is already extracted (but removing the compressed file 
     if present).
+
     """
-    print(f"Preparing local data directory for '{task_name}'...")
+    print(f"Preparing local data directory for {task_name}")
 
     repo_id = f'AI4Climate/{task_name}'
 
@@ -159,7 +165,7 @@ def _download_hf_repo(
     ]
 
     if compressed_files:
-        print(f"Uncompressing {len(compressed_files)} files (if needed) in parallel...")
+        print(f"Uncompressing {len(compressed_files)} files (if needed) in parallel.")
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_compressed = {
                 executor.submit(_uncompress_and_delete_file, path): path 
@@ -179,6 +185,7 @@ def _collect_files(repo_id: str, local_dir: str, subpath: str, files_list: list)
     """
     Recursively gather file paths from the Hugging Face API 
     and append them as (file_url, local_entry_path) tuples to files_list.
+
     """
     api_url = f"https://huggingface.co/api/datasets/{repo_id}/tree/main"
     if subpath:
@@ -212,6 +219,7 @@ def _download_single_file(url: str, local_path: str):
       2) the uncompressed directory already exists (for compressed files).
     If the uncompressed directory exists, also removes any leftover .zip/.tar* 
     to keep things clean.
+
     """
     # If file already exists, skip
     if os.path.exists(local_path):
@@ -265,14 +273,17 @@ def _uncompress_and_delete_file(file_path: str):
         print(f"[SKIP] Unrecognized compression format: {file_path}")
         return
 
-    print(f"Uncompressing {file_path}...")
+    print(f"Uncompressing {file_path}.")
     subprocess.run(cmd, check=True)
-    print(f"Deleting {file_path}...")
+    print(f"Deleting {file_path}.")
     os.remove(file_path)
 
 
 def _is_compressed_file(local_path: str) -> bool:
-    """Return True if the path ends with a known compression extension."""
+    """
+    Return True if the path ends with a known compression extension.
+    
+    """
     compressed_exts = (".zip", ".tar.gz", ".tar")
     return any(local_path.endswith(ext) for ext in compressed_exts)
 
@@ -307,14 +318,16 @@ def _validate_inputs(
     max_workers: int,
     max_workers_download: int
 ):
-    """ """
-
+    """
+    Check user inputs and correct if necessary.
+    
+    """
     # validate task_name
     if task_name not in LIST_AVAIL_TASKNAMES:
         sys.exit(f"Check arguments. Selected task {task_name} not recognized.")
 
     else:
-        print(f"Processing '{subtask_name}' for '{task_name}'...")
+        print(f"Processing {subtask_name} for {task_name}.")
 
     # validate root_path
     if type(root_path) is not str:
@@ -327,7 +340,7 @@ def _validate_inputs(
             'with a value of data_frac=1.')
         data_frac = 1
     else:
-        print(f'Using the full dataset with data_frac=1 set by user.')
+        print(f'Using {data_frac:.0%} of total data as specified by user.')
 
     # validate max_workers
     if (

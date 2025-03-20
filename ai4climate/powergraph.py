@@ -19,8 +19,18 @@ ALL_GRIDS_LIST = [
     'uk'
 ]
 
-SPLIT_RATIO = (0.5, 0.1, 0.4)  # train, val, test
-np_dtype = np.float64  # Set default dtypes
+LIST_AVAIL_SUBTASKNAMES = [
+    'cascading_failure_binary',
+    'cascading_failure_multiclass',
+    'demand_not_served_regression',
+    'cascading_failure_sequence'
+]
+
+# train, val, test
+SPLIT_RATIO = (0.5, 0.1, 0.4)  
+
+# Set default dtypes
+np_dtype = np.float64
 
 
 def load(
@@ -33,7 +43,12 @@ def load(
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
     Load and prepare the data for a given subtask.
+
     """
+    # check if valid subtask name is passed
+    if subtask_name not in LIST_AVAIL_SUBTASKNAMES:
+        raise ValueError(f"Unknown subtask name: {subtask_name}")
+        
     # Load JSON files
     data_dict = _load_json_files(local_dir, data_frac, max_workers=max_workers)
 
@@ -73,8 +88,6 @@ def _parse_dataset(
         'demand_not_served': '3',
         'cascading_failure_sequence': '4'
     }
-    if subtask_name not in subtask_label_map:
-        raise ValueError(f"Unknown subtask name: {subtask_name}")
 
     label_key = subtask_label_map[subtask_name]
     for entry in data_dict.values():
