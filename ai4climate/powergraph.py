@@ -1,4 +1,6 @@
-"""Load requested subtask for PowerGraph."""
+"""Loads requested subtask for PowerGraph.
+
+"""
 import os
 import gc
 import json

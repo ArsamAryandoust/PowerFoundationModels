@@ -19,9 +19,9 @@ pip install ai4climate
 
 For example, load the "train_small_test_medium" task from the "OPFData" dataset:
 ```Python
-from ai4climate import load_task
+from ai4climate import load
 
-dataset = load_task(
+dataset = load(
     task_name='OPFData', 
     subtask_name='train_small_test_medium',
     root_path='~/AI4Climate/'
