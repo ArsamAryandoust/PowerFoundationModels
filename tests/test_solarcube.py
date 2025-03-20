@@ -1,9 +1,9 @@
-"""Tests loading of standardized tasks for OPFData.
+"""Tests loading of standardized tasks for SolarCube.
 
 
 Example usage:
 --------------
-    $ python tests/test_opfdata.py
+    $ python tests/test_solarcube.py
 
 """
 
@@ -17,11 +17,12 @@ root_path = "../donti_group_shared/AI4Climate/tests"
     val_data, 
     test_data
 ) = load.load_task(
-    "OPFData", 
+    "SolarCube", 
     "train_medium_test_small", 
     root_path,
     data_frac = 0.01,
     train_frac = 0.1
 )
 
-print("Successfully executed 'test_opfdata.py'!")
+
+print("Successfully executed 'test_solarcube.py'!")

@@ -17,18 +17,18 @@ dataset = load_task(
 ```
 
 Available sub-tasks are:
-- odd_time_area_3h
-- odd_time_area_24h
-- odd_time_point_3h
-- odd_time_point_24h
-- odd_space_area_3h
-- odd_space_area_24h
-- odd_space_point_3h
-- odd_space_point_24h
-- odd_spacetime_area_3h
-- odd_spacetime_area_24h
-- odd_spacetime_point_3h
-- odd_spacetime_point_24h
+- `odd_time_area_3h`
+- `odd_time_area_24h`
+- `odd_time_point_3h`
+- `odd_time_point_24h`
+- `odd_space_area_3h`
+- `odd_space_area_24h`
+- `odd_space_point_3h`
+- `odd_space_point_24h`
+- `odd_spacetime_area_3h`
+- `odd_spacetime_area_24h`
+- `odd_spacetime_point_3h`
+- `odd_spacetime_point_24h`
 
 
 
