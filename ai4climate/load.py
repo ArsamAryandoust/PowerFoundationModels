@@ -12,7 +12,8 @@ import powergraph
 
 LIST_AVAIL_TASKNAMES = [
     'OPFData',
-    'PowerGraph'
+    'PowerGraph',
+    'SolarCube'
 ]
 
 def load_task(

@@ -18,7 +18,7 @@ root_path = "../donti_group_shared/AI4Climate/tests"
     test_data
 ) = load.load_task(
     "SolarCube", 
-    "train_medium_test_small", 
+    "odd_time_area_3h", 
     root_path,
     data_frac = 0.01,
     train_frac = 0.1
