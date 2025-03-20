@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # individual task loading modules
 import opfdata
 import powergraph
+import solarcube
 
 LIST_AVAIL_TASKNAMES = [
     'OPFData',

@@ -3,7 +3,6 @@
 """
 from typing import Dict, Any, Tuple, Union, List
 
-
 SPLIT_RATIO = (0.5, 0.1, 0.4)  # train, val, test
 
 def load(
@@ -28,4 +27,3 @@ def load(
         'test_data': test_data
     }
 
-    
