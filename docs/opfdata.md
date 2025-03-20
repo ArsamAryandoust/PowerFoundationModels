@@ -25,7 +25,7 @@ Available sub-tasks are:
 - `train_large_test_medium`
 
 
-## Download raw data
+## Download raw task data
 
 You can download the raw OPFData datasets using Pytorch Geometric, or a Google 
 Cloud bucket under
