@@ -1,3 +1,6 @@
+ai4climate.egg-info/
+dist/
+venv/
 .DS_Store
 .pypirc
 .pypirc_test
