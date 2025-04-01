@@ -1,7 +1,9 @@
-.DS_Store
+ai4climate.egg-info/
+dist/
+venv/
+**/.DS_Store
 .pypirc
 .pypirc_test
 pyproject.toml
-setup.cfg
 somenotes
-*/.ipynb_checkpoints
+**/.ipynb_checkpoints
