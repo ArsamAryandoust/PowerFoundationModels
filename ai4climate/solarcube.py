@@ -64,7 +64,7 @@ def load(
     satellite_images_dict = _load_hdf5_data(local_dir, subtask_name, max_workers)
 
     # create feature label pairs forming dataset
-    features, labels = _create_feature_label_pairs(
+    features, labels = _process_features_labels(
         timestamps_dict,
         station_features_df, 
         ground_radiation_df,
@@ -75,6 +75,13 @@ def load(
     # free memory
     del timestamps_dict, station_features_df, ground_radiation_df
     del satellite_images_dict
+    gc.collect()
+
+    # create paired dataset
+    paired_dataset = _pair_features_labels(features, labels)
+
+    # free memory
+    del features, labels
     gc.collect()
 
     # create train-val-test splits
@@ -97,7 +104,7 @@ def load(
     }
 
 
-def _create_feature_label_pairs(
+def _process_features_labels(
     timestamps_dict: dict,
     station_features_df: pd.DataFrame,
     ground_radiation_df: pd.DataFrame | None,
@@ -105,7 +112,7 @@ def _create_feature_label_pairs(
     subtask_name: str
 ):
     """
-    Pair features and labels for supervised learning dataset of subtask.
+    Create features and labels for supervised learning dataset of subtask.
 
     """
     ### fill with features and labels
@@ -169,7 +176,7 @@ def _create_feature_label_pairs(
                 * satellite_images_dict['cloud_mask']
             )
 
-        ### add features dictionary
+        ### add to features dictionary
         features[id+1] = {
             'timestamp_utc': timestamp_utc,
             'timestamp_local': timestamp_local,
@@ -180,15 +187,25 @@ def _create_feature_label_pairs(
             'features_ground': features_ground
         }
 
+        ### add to labels dictionary
         labels[id+1] = label_task
-    
-    print(features)
-    print(labels)
-    sys.exit()
 
     return features, labels
 
 
+def _pair_features_labels(
+    features: dict,
+    labels: dict
+) -> dict:
+    """
+    Pair features and labels into single dataset.
+
+    """
+    
+    paired_dataset = {}
+
+    return paired_dataset
+ 
 def _split_data(
     features: dict,
     labels: dict,
@@ -197,9 +214,9 @@ def _split_data(
     subtask_name: str
 ):
     """ 
+    Split feature 
     """
 
-    sys.exit()
 
     return train_data, val_data, test_data
 
