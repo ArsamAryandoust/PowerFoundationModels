@@ -1,6 +1,4 @@
-"""Contains multi-processing functions that pre-process datasets in parallel.
-
-Main entry point to script-wise data pre-processing. 
+"""Contains functions for pre-processing raw data for SolarCube
 
 Example:
 --------
