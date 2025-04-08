@@ -61,26 +61,38 @@ def load(
     else:
         raise VallueError('Check subtask handling. Naming not consistent!')
 
-    # load electric profiles
+    # load electric load profiles
     df_loads = load_electric_load_profiles(local_dir)
 
-    
+    # load building images
 
+    # load cluster images
+
+    # load meteo data
+
+    # pair data 
+    
+    # split data into train, val, test data
+    
+    # bundle to training validation and testing data
     subtask_data = {
         'train_data': train_data,
         'val_data': val_data,
         'test_data': test_data
     }
-    
+
+    return subtask_data
+
 
 def load_electric_load_profiles(local_dir: str):
     """
-    Load electric load profiles as DataFrame
+    Load electric load profiles as DataFrame.
 
     """
-
     # load load profiles
     path_load = os.path.join(local_dir, 'load_profiles.csv')
     df_loads = pd.read_csv(path_load)
 
-    return df_loads 
+    return df_loads
+
+    

@@ -17,10 +17,12 @@ dataset = load_task(
 ```
 
 Available sub-tasks are:
-- `buildings_92`
-- `buildings_451`
-
-
+- `odd_time_buildings92`
+- `odd_space_buildings92`
+- `odd_spacetime_buildings92`
+- `odd_time_buildings451`
+- `odd_space_buildings451`
+- `odd_spacetime_buildings451`
 
 ## Download raw task data
 
