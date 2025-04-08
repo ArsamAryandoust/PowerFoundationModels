@@ -2,7 +2,7 @@
 
 ## Load standardized task data
 
-You can both download and load all data associated with standardized PowerGraph tasks
+You can both download and load all data associated with standardized SolarCube tasks
 in the following fashion. For example, load the `odd_time_area_3h` sub-task
 with:
 
@@ -17,25 +17,18 @@ dataset = load_task(
 ```
 
 Available sub-tasks are:
-- `odd_time_area_3h`
-- `odd_time_area_24h`
-- `odd_time_point_3h`
-- `odd_time_point_24h`
-- `odd_space_area_3h`
-- `odd_space_area_24h`
-- `odd_space_point_3h`
-- `odd_space_point_24h`
-- `odd_spacetime_area_3h`
-- `odd_spacetime_area_24h`
-- `odd_spacetime_point_3h`
-- `odd_spacetime_point_24h`
-
+- `odd_time_area`
+- `odd_time_point`
+- `odd_space_area`
+- `odd_space_point`
+- `odd_spacetime_area`
+- `odd_spacetime_point`
 
 
 
 ## Download raw task data
 
-You can download the raw PowerGraph datasets from 
+You can download the raw SolarCube datasets from 
 https://zenodo.org/records/11498739. The download can be
 done programmatically, and files be decompressed, using the following command
 

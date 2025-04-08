@@ -2,3 +2,4 @@ torch
 numpy
 pandas
 h5py
+pillow

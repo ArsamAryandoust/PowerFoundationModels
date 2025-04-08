@@ -22,11 +22,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import opfdata
 import powergraph
 import solarcube
+import buildingelectricity
 
 LIST_AVAIL_TASKNAMES = [
     'OPFData',
     'PowerGraph',
-    'SolarCube'
+    'SolarCube',
+    'BuildingElectricity'
 ]
 
 def load_task(
@@ -106,6 +108,14 @@ def _load_subtask(
         )
     elif 'SolarCube' in local_dir:
         subtask_data = solarcube.load(
+            local_dir,
+            subtask_name,
+            data_frac,
+            train_frac,
+            max_workers
+        )
+    elif 'BuildingElectricity' in local_dir:
+        subtask_data = buildingelectricity.load(
             local_dir,
             subtask_name,
             data_frac,
