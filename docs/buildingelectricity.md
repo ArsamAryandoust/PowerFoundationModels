@@ -11,7 +11,7 @@ from ai4climate import load_task
 
 dataset = load_task(
     task_name='BuildingElectricity', 
-    subtask_name='buildings_451',
+    subtask_name='odd_time_buildings92',
     root_path='~/AI4Climate/'
 )
 ```
