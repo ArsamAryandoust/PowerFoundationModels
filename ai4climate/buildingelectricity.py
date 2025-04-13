@@ -5,6 +5,9 @@ import os
 from PIL import Image
 from typing import Dict, Any, Tuple, Union, List
 import pandas as pd
+import gc
+
+import sys
 
 
 AVAIL_SUBTASKNAMES_LIST = [
@@ -28,6 +31,12 @@ IMAGE_TYPE_LIST = [
     'relief',
     'slope'
 ]
+
+HISTORIC_WINDOW_SIZE = 96
+LABEL_WINDOW_SIZE = 96
+
+# The standardized split ratio for the entire dataset: train, val, test
+SPLIT_RATIO = (0.5, 0.1, 0.4)
 
 def load(
     local_dir: str,
@@ -73,34 +82,290 @@ def load(
         raise VallueError('Check subtask handling. Naming not consistent!')
 
     # load electric load profiles
-    df_loads, building_to_cluster, time_stamps = load_electric_load_profiles(local_dir)
+    (
+        df_loads, 
+        building_to_cluster, 
+        time_stamps
+    ) = _load_electric_load_profiles(local_dir)
 
     # load building images
-    building_image_dict = load_building_images(local_dir)
+    building_images = _load_building_images(local_dir)
 
     # load cluster images
-    cluster_image_dict = load_cluster_images(local_dir)
+    cluster_images = _load_cluster_images(local_dir)
 
     # load meteo data
-    meteo_dict = load_meteo_data(local_dir)
+    meteo_dict = _load_meteo_data(local_dir)
 
     # pair data
+    paired_dataset = _pair_data(
+        df_loads,
+        meteo_dict,
+        building_to_cluster, 
+        time_stamps
+    )
 
-    
+    del df_loads, building_to_cluster, time_stamps, meteo_dict
+    gc.collect()
+
     # split data into train, val, test data
-    train_data, val_data, test_data = 0, 0, 0
+    train_data, val_data, test_data = _split_data(
+        paired_dataset, 
+        subtask_name,
+        seed
+    )
 
     # bundle to training validation and testing data
     subtask_data = {
         'train_data': train_data,
         'val_data': val_data,
-        'test_data': test_data
+        'test_data': test_data,
+        'building_images': building_images,
+        'cluster_images': cluster_images
     }
 
     return subtask_data
 
 
-def load_meteo_data(local_dir: str):
+def _pair_data(
+    df_loads: pd.DataFrame,
+    meteo_dict: dict,
+    building_to_cluster: dict, 
+    time_stamps: pd.DataFrame
+):
+    """
+    Pair all data components into single data points and return as dictionary.
+
+    """
+    # fill this
+    paired_dataset = {}
+    datapoint_counter = 0
+
+    # iterate over all columns/building IDs
+    for building_id in df_loads.columns:
+        # set cluster ID
+        cluster_id = building_to_cluster[int(building_id)]
+
+        # set load profile
+        load_profile = df_loads[building_id]
+
+        # iterate over loads in window sizes.
+        for i in range(
+            HISTORIC_WINDOW_SIZE, 
+            len(load_profile), 
+            HISTORIC_WINDOW_SIZE + LABEL_WINDOW_SIZE
+        ):
+            # set historic load
+            load = load_profile.iloc[i-HISTORIC_WINDOW_SIZE:i].values
+
+            # set future load as label
+            label = load_profile.iloc[i:i+LABEL_WINDOW_SIZE].values
+
+            # set time stamp
+            timestamp = time_stamps.iloc[i]
+
+            # set meteo data
+            meteo_df = meteo_dict[f'cluster_{cluster_id}']
+            air_density = meteo_df['air_density'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            cloud_cover = meteo_df['cloud_cover'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            precipitation = meteo_df['precipitation'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            radiation_surface = meteo_df['radiation_surface'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            radiation_toa = meteo_df['radiation_toa'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            snow_mass = meteo_df['snow_mass'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            snowfall = meteo_df['snowfall'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            temperature_celsius = meteo_df['temperature'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            wind_speed = meteo_df['wind_speed'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+
+            data_point = {
+                'load': load,
+                'air_density': air_density,
+                'cloud_cover': cloud_cover,
+                'precipitation': precipitation,
+                'radiation_surface': radiation_surface,
+                'radiation_toa': radiation_toa,
+                'snow_mass': snow_mass,
+                'snowfall': snowfall,
+                'temperature_celsius': temperature_celsius,
+                'wind_speed': wind_speed,
+                'timestamp': timestamp,
+                'building_id': int(building_id),
+                'cluster_id': cluster_id,
+                'label': label
+            }
+            paired_dataset.update(
+                {datapoint_counter: data_point}
+            )
+            datapoint_counter += 1    
+
+    return paired_dataset
+
+
+import pandas as pd
+import numpy as np
+
+def _split_data(
+    paired_dataset: dict, 
+    subtask_name: str,
+    seed: int
+) -> (List(Dict), List(Dict), List(Dict)):
+    """
+    Split train/val/test data according to the chosen subtask.
+    
+    Parameters
+    ----------
+    paired_dataset : dict
+        Keys are arbitrary indices; values are dictionaries with fields
+        such as 'timestamp', 'building_id', 'load', etc.
+    subtask_name : str
+        Name of the subtask, as defined in AVAIL_SUBTASKNAMES_LIST. One of:
+        [
+            'odd_time_buildings92',
+            'odd_space_buildings92',
+            'odd_spacetime_buildings92',
+            'odd_time_buildings451',
+            'odd_space_buildings451',
+            'odd_spacetime_buildings451'
+        ]
+    seed : int
+        Random seed for reproducibility when shuffling building IDs.
+        
+    Returns
+    -------
+    train_data : list of dict
+    val_data   : list of dict
+    test_data  : list of dict
+
+    """
+    # Convert the entire paired_dataset to a DataFrame for easy splitting.
+    df = pd.DataFrame.from_dict(paired_dataset, orient='index')
+    # Ensure timestamps are datetime if not already:
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    
+    # Decide if we are doing time-based, building-based, or both.
+    do_time_split   = ('time'   in subtask_name)
+    do_space_split  = ('space'  in subtask_name)
+    do_spacetime    = ('spacetime' in subtask_name)
+
+    # set standard splitting ratios as defined by SPLIT_RATIO
+    train_ratio, val_ratio, test_ratio = SPLIT_RATIO[0], SPLIT_RATIO[1], SPLIT_RATIO[2]
+    
+    # A few helper functions for clarity:
+    
+    def time_based_split(df_in):
+        """
+        Split df_in purely by timestamp in ascending order, according
+        to train/val/test ratios. All building IDs remain in each split.
+
+        """
+        df_sorted = df_in.sort_values(by='timestamp').reset_index(drop=True)
+        n_total   = len(df_sorted)
+        n_train   = int(train_ratio * n_total)
+        n_val     = int(val_ratio   * n_total)
+        # The remainder automatically goes to test
+        n_test    = n_total - n_train - n_val
+        
+        df_train = df_sorted.iloc[:n_train]
+        df_val   = df_sorted.iloc[n_train:(n_train + n_val)]
+        df_test  = df_sorted.iloc[(n_train + n_val):]
+        
+        return df_train, df_val, df_test
+
+    def building_based_split(df_in):
+        """
+        Split df_in purely by building ID. Each building appears in exactly
+        one of train/val/test sets, with no overlap of IDs across splits.
+
+        """
+        building_ids = df_in['building_id'].unique()
+        rng = np.random.default_rng(seed)
+        rng.shuffle(building_ids)
+        
+        n_bldg       = len(building_ids)
+        n_train_bldg = int(train_ratio * n_bldg)
+        n_val_bldg   = int(val_ratio   * n_bldg)
+        # remainder to test
+        n_test_bldg  = n_bldg - n_train_bldg - n_val_bldg
+        
+        bldg_train = building_ids[:n_train_bldg]
+        bldg_val   = building_ids[n_train_bldg:(n_train_bldg + n_val_bldg)]
+        bldg_test  = building_ids[(n_train_bldg + n_val_bldg):]
+
+        df_train = df_in[df_in['building_id'].isin(bldg_train)]
+        df_val   = df_in[df_in['building_id'].isin(bldg_val)]
+        df_test  = df_in[df_in['building_id'].isin(bldg_test)]
+        
+        return df_train, df_val, df_test
+
+    # 1) "odd_time_*" => all buildings in each split, but time-based split
+    if (do_time_split) and (not do_space_split):
+        df_train, df_val, df_test = time_based_split(df)
+
+    # 2) "odd_space_*" => building-based partition
+    elif (do_space_split) and (not do_time_split):
+        df_train, df_val, df_test = building_based_split(df)
+        
+    # 3) "odd_spacetime_*" => disjoint building IDs AND disjoint timestamps
+    elif do_spacetime:
+        # Randomly pick set of building IDs for test (disjoint from train/val).
+        # Among remaining building IDs, do a time-based split for train and val
+        # Test set also uses a disjoint time window among the test building IDs
+        
+        building_ids = df['building_id'].unique()
+        rng = np.random.default_rng(seed)
+        rng.shuffle(building_ids)
+        
+        # Let test portion of building IDs be test_ratio
+        n_bldg            = len(building_ids)
+        n_test_bldg       = int(test_ratio * n_bldg)
+        test_bldg         = building_ids[:n_test_bldg]
+        trainval_bldg     = building_ids[n_test_bldg:]
+        
+        # From the building subset used for train+val, do a time-based split:
+        df_trainval = df[df['building_id'].isin(trainval_bldg)]
+        df_trainval_sorted = df_trainval.sort_values(
+            by='timestamp').reset_index(drop=True)
+        
+        n_trainval = len(df_trainval_sorted)
+        n_train    = int(train_ratio * n_trainval)
+        n_val      = int(val_ratio   * n_trainval)
+        # remainder to "test portion" of these building IDs if you like,
+        # but typically we won't mix them with the separate test building set
+        # to keep "test building IDs" truly disjoint.
+        
+        df_train = df_trainval_sorted.iloc[:n_train]
+        df_val   = df_trainval_sorted.iloc[n_train:(n_train + n_val)]
+        
+        # For the test portion: we also want "test timestamps not present in training data."
+        # A simple approach is to take the last chunk of timestamps across the *test buildings* only.
+        df_test_bldg = df[df['building_id'].isin(test_bldg)]
+        df_test_bldg_sorted = df_test_bldg.sort_values(by='timestamp').reset_index(drop=True)
+        
+        # We'll just take all of those as test if you want them *fully* disjoint by building.
+        # If you also want them disjoint by time, you can pick the last 20% of timestamps among that subset:
+        n_test_bldg_data  = len(df_test_bldg_sorted)
+        # Perhaps we do a partial holdout in time among that set:
+        # For example, we take the last 100% of that subset for test. 
+        # Or do some fraction if desired. Here we keep it simple:
+        df_test = df_test_bldg_sorted  # all data from the withheld building set
+
+        # If you truly want to remove an overlapping time range, you can do something like:
+        # n_test_time = int( test_ratio * n_test_bldg_data )
+        # df_test     = df_test_bldg_sorted.iloc[-n_test_time:]
+        # (In that scenario, the building IDs and timestamps in test do not appear in train/val.)
+
+    else:
+        raise ValueError(f"Unexpected subtask pattern: {subtask_name}")
+    
+    # Convert dataframes back to lists of dictionaries
+    train_data = df_train.to_dict(orient='records')
+    val_data   = df_val.to_dict(orient='records')
+    test_data  = df_test.to_dict(orient='records')
+    
+    return train_data, val_data, test_data
+
+
+
+def _load_meteo_data(local_dir: str):
     """
     Load meteorological time series data.
 
@@ -131,7 +396,7 @@ def load_meteo_data(local_dir: str):
     return meteo_dict
 
 
-def load_electric_load_profiles(local_dir: str):
+def _load_electric_load_profiles(local_dir: str):
     """
     Load electric load profiles as DataFrame.
 
@@ -163,7 +428,7 @@ def load_electric_load_profiles(local_dir: str):
 
     
 
-def load_building_images(local_dir):
+def _load_building_images(local_dir):
     """
     Load aerial images of buildings. Use padded images.
 
@@ -198,7 +463,7 @@ def load_building_images(local_dir):
     return building_image_dict
 
 
-def load_cluster_images(local_dir):
+def _load_cluster_images(local_dir):
     """
     Load aerial images of clusters.
 
