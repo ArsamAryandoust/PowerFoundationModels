@@ -132,9 +132,23 @@ def _pair_data(
     meteo_dict: dict,
     building_to_cluster: dict, 
     time_stamps: pd.DataFrame
-):
+) -> dict:
     """
     Pair all data components into single data points and return as dictionary.
+
+    Parameters
+    ----------
+    df_loads : pd.DataFrame
+        Dataframe containing all load profiles in each column, with columns
+        being building IDs.
+    meteo_dict : dict
+        Dictionary of meteorological Dataframe values. One entry per Cluster.
+    building_to_cluster : dict
+        Mapping from building IDs to cluster IDs.
+        
+    Returns
+    -------
+    paired_dataset : dict
 
     """
     # fill this
@@ -166,15 +180,24 @@ def _pair_data(
 
             # set meteo data
             meteo_df = meteo_dict[f'cluster_{cluster_id}']
-            air_density = meteo_df['air_density'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            cloud_cover = meteo_df['cloud_cover'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            precipitation = meteo_df['precipitation'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            radiation_surface = meteo_df['radiation_surface'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            radiation_toa = meteo_df['radiation_toa'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            snow_mass = meteo_df['snow_mass'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            snowfall = meteo_df['snowfall'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            temperature_celsius = meteo_df['temperature'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
-            wind_speed = meteo_df['wind_speed'].iloc[i-HISTORIC_WINDOW_SIZE:i].values
+            air_density = meteo_df['air_density'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            cloud_cover = meteo_df['cloud_cover'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            precipitation = meteo_df['precipitation'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            radiation_surface = meteo_df['radiation_surface'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            radiation_toa = meteo_df['radiation_toa'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            snow_mass = meteo_df['snow_mass'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            snowfall = meteo_df['snowfall'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            temperature_celsius = meteo_df['temperature'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
+            wind_speed = meteo_df['wind_speed'].iloc[
+                i-HISTORIC_WINDOW_SIZE:i].values
 
             data_point = {
                 'load': load,
@@ -200,14 +223,11 @@ def _pair_data(
     return paired_dataset
 
 
-import pandas as pd
-import numpy as np
-
 def _split_data(
-    paired_dataset: dict, 
-    subtask_name: str,
-    seed: int
-) -> (List(Dict), List(Dict), List(Dict)):
+    paired_dataset, 
+    subtask_name,
+    seed
+):
     """
     Split train/val/test data according to the chosen subtask.
     
@@ -242,15 +262,16 @@ def _split_data(
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     
     # Decide if we are doing time-based, building-based, or both.
-    do_time_split   = ('time'   in subtask_name)
-    do_space_split  = ('space'  in subtask_name)
-    do_spacetime    = ('spacetime' in subtask_name)
+    do_time_split   = ('_time_' in subtask_name)
+    do_space_split  = ('_space_' in subtask_name)
+    do_spacetime    = ('_spacetime_' in subtask_name)
 
     # set standard splitting ratios as defined by SPLIT_RATIO
-    train_ratio, val_ratio, test_ratio = SPLIT_RATIO[0], SPLIT_RATIO[1], SPLIT_RATIO[2]
+    train_ratio = SPLIT_RATIO[0]
+    val_ratio = SPLIT_RATIO[1]
+    test_ratio = SPLIT_RATIO[2]
     
-    # A few helper functions for clarity:
-    
+    ### Helper functions:
     def time_based_split(df_in):
         """
         Split df_in purely by timestamp in ascending order, according
@@ -324,33 +345,23 @@ def _split_data(
         df_trainval = df[df['building_id'].isin(trainval_bldg)]
         df_trainval_sorted = df_trainval.sort_values(
             by='timestamp').reset_index(drop=True)
-        
+
+        # split remainders
+        trainval_ratio = train_ratio + val_ratio # for rescaled ratios
         n_trainval = len(df_trainval_sorted)
-        n_train    = int(train_ratio * n_trainval)
-        n_val      = int(val_ratio   * n_trainval)
-        # remainder to "test portion" of these building IDs if you like,
-        # but typically we won't mix them with the separate test building set
-        # to keep "test building IDs" truly disjoint.
+        n_train    = int(train_ratio / trainval_ratio * n_trainval)
         
         df_train = df_trainval_sorted.iloc[:n_train]
-        df_val   = df_trainval_sorted.iloc[n_train:(n_train + n_val)]
+        df_val   = df_trainval_sorted.iloc[n_train:]
         
-        # For the test portion: we also want "test timestamps not present in training data."
-        # A simple approach is to take the last chunk of timestamps across the *test buildings* only.
+        # set test building IDs and sort by time stamp for splitting off.
         df_test_bldg = df[df['building_id'].isin(test_bldg)]
         df_test_bldg_sorted = df_test_bldg.sort_values(by='timestamp').reset_index(drop=True)
-        
-        # We'll just take all of those as test if you want them *fully* disjoint by building.
-        # If you also want them disjoint by time, you can pick the last 20% of timestamps among that subset:
-        n_test_bldg_data  = len(df_test_bldg_sorted)
-        # Perhaps we do a partial holdout in time among that set:
-        # For example, we take the last 100% of that subset for test. 
-        # Or do some fraction if desired. Here we keep it simple:
-        df_test = df_test_bldg_sorted  # all data from the withheld building set
 
-        # If you truly want to remove an overlapping time range, you can do something like:
-        # n_test_time = int( test_ratio * n_test_bldg_data )
-        # df_test     = df_test_bldg_sorted.iloc[-n_test_time:]
+        # split off time and building
+        n_test_bldg_data  = len(df_test_bldg_sorted)
+        n_test_time = int( test_ratio * n_test_bldg_data )
+        df_test     = df_test_bldg_sorted.iloc[-n_test_time:]
         # (In that scenario, the building IDs and timestamps in test do not appear in train/val.)
 
     else:
@@ -365,9 +376,19 @@ def _split_data(
 
 
 
-def _load_meteo_data(local_dir: str):
+def _load_meteo_data(local_dir):
     """
     Load meteorological time series data.
+
+    Parameters
+    ----------
+    local_dir : str
+        path to profile subset data directory root.
+
+
+    Returns
+    ----------
+    meteo_dict : dict of pd.DataFrame
 
     """
     # fill this
@@ -396,9 +417,21 @@ def _load_meteo_data(local_dir: str):
     return meteo_dict
 
 
-def _load_electric_load_profiles(local_dir: str):
+def _load_electric_load_profiles(local_dir):
     """
     Load electric load profiles as DataFrame.
+
+    Parameters
+    ----------
+    local_dir : str
+        path to profile subset data directory root.
+
+
+    Returns
+    ----------
+    df_loads : pd.DataFrame
+    building_to_cluster : dict of int
+    time_stamps : pd.Series
 
     """
     # set path
@@ -409,8 +442,8 @@ def _load_electric_load_profiles(local_dir: str):
 
     # First row is the data, first row index is probably 0
     time_stamps = df_loads.iloc[1:, 0]
-    cluster_ids = df_loads.iloc[0, 1:]  # skip the first column (label "cluster ID")
-    building_ids = df_loads.columns[1:]  # skip the first column (label "building ID")
+    cluster_ids = df_loads.iloc[0, 1:] #skip first column (label "cluster ID")
+    building_ids = df_loads.columns[1:] #skip first column (label "building ID")
 
     # drop cluster ID row
     df_loads.drop(labels=1, axis='index', inplace=True)
@@ -431,6 +464,16 @@ def _load_electric_load_profiles(local_dir: str):
 def _load_building_images(local_dir):
     """
     Load aerial images of buildings. Use padded images.
+
+    Parameters
+    ----------
+    local_dir : str
+        path to profile subset data directory root.
+
+
+    Returns
+    ----------
+    building_image_dict : dict of images
 
     """
     # fill this dictionary
@@ -466,6 +509,16 @@ def _load_building_images(local_dir):
 def _load_cluster_images(local_dir):
     """
     Load aerial images of clusters.
+
+    Parameters
+    ----------
+    local_dir : str
+        path to profile subset data directory root.
+
+
+    Returns
+    ----------
+    cluster_image_dict : dict of images
 
     """
     # fill this dictionary
