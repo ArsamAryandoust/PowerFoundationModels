@@ -1,6 +1,7 @@
 """Loads, parses and tests the configurations user sets in config.yml.
 
 """
+import random
 import yaml
 import torch
 import numpy as np
@@ -51,10 +52,6 @@ class ExperimentConfiguration:
 
          # set anomaly detection for tracing discontinuity in backpropagation.
         torch.autograd.set_detect_anomaly(self.torch_anomaly_detection)
-        
-        # overwrite seed for experiments ran with run.sh
-        if seed is not None:
-            self.seed = seed 
 
         # set global random seed.
         self._set_random_seed()

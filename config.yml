@@ -1,5 +1,5 @@
 ### General
-seed: None
+seed: 7
 torch_anomaly_detection: True
 
 ### Canonical data representation
@@ -12,6 +12,7 @@ dim_feedforward: 4096
 dropout: 0.1
 max_seq_len: 4096
 layer_norm_eps: 1.e-5
+activation: gelu
 
 ### Training Loop
 dtype: float64
