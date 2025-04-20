@@ -85,7 +85,7 @@ def _parse_dataset(
     subtask_label_map = {
         'cascading_failure_binary': '1',
         'cascading_failure_multiclass': '2',
-        'demand_not_served': '3',
+        'demand_not_served_regression': '3',
         'cascading_failure_sequence': '4'
     }
 
@@ -163,7 +163,7 @@ def _backupfunction(
             entry['labels'] = entry['labels']['1']
         elif subtask_name == 'cascading_failure_multiclass':
             entry['labels'] = entry['labels']['2']
-        elif subtask_name == 'demand_not_served':
+        elif subtask_name == 'demand_not_served_regression':
             entry['labels'] = entry['labels']['3']
         elif subtask_name == 'cascading_failure_sequence':
             entry['labels'] = entry['labels']['4']

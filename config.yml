@@ -2,8 +2,21 @@
 seed: 7
 torch_anomaly_detection: True
 
+### Task data
+opfdata: True
+powergraph: True
+solarcube: True
+buildingelectricity: True
+data_frac: 0.01
+
+### Subtask choice
+opfdata_subtask: 'train_small_test_medium'
+powergraph_subtask: 'demand_not_served_regression'
+solarcube_subtask: 'odd_time_area'
+buildingelectricity_subtask: 'odd_time_buildings92'
+
 ### Canonical data representation
-std_vect_dim: 1024
+std_vect_dim: 512
 
 ### Transformer backbone architecture
 n_heads: 16
@@ -18,5 +31,4 @@ activation: gelu
 dtype: float64
 device_gpu: True
 batch: 2
-
 

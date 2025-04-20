@@ -7,7 +7,6 @@ import torch
 import numpy as np
 
 
-
 class ExperimentConfiguration:
     """
     Bundles the configurations for executing experiments.
@@ -19,7 +18,7 @@ class ExperimentConfiguration:
         path_file: str
     ):
         """
-        Load config from yaml. Reset attributes and add new attributes.
+        Load config from yaml, reset attributes, and add necessary attributes.
         
         """
         
@@ -50,7 +49,7 @@ class ExperimentConfiguration:
             torch.set_default_dtype(torch.float32)
             self.np_dtype = np.float32
 
-         # set anomaly detection for tracing discontinuity in backpropagation.
+        # set anomaly detection for tracing discontinuity in backpropagation.
         torch.autograd.set_detect_anomaly(self.torch_anomaly_detection)
 
         # set global random seed.
@@ -81,5 +80,3 @@ class ExperimentConfiguration:
         if self.torch_device == torch.device('cuda'):
             torch.cuda.manual_seed_all(self.seed)
 
-
-        
