@@ -50,3 +50,9 @@ def load_all(
             data_frac = cfg.data_frac
         )
 
+    return (
+        opfdata_taskdata,
+        powergraph_taskdata,
+        solarcube_taskdata,
+        buildingelectricity_taskdata
+    )

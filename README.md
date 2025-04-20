@@ -28,6 +28,11 @@ dataset = load(
 )
 ```
 
+Run main experiments as specified in config.yml with:
+```bash
+python src/main.py
+```
+
 ## List of available datasets
 
 1. [OPFData](docs/opfdata.md)
