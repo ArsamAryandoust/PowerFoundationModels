@@ -70,16 +70,17 @@ class TransformerBackbone(nn.Module):
         dropout: float,
         max_seq_len: int,
         layer_norm_eps: float,
+        activation: str
     ):
         super().__init__()
         self.pos_enc = PositionalEncoding(std_vect_dim, max_seq_len)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            std_vect_dim=std_vect_dim,
+            d_model=std_vect_dim,
             nhead=n_heads,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
-            activation="gelu",
+            activation=activation,
             batch_first=True,  # (batch, seq, feature)
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)

@@ -3,13 +3,15 @@
 
 Example usage:
 --------------
-$ python main.py
+$ python src/main.py
 
 """
+import torch
+
 import configuration
 import transformer 
 
-PATH_CONFIG = '../config.yml'
+PATH_CONFIG = 'config.yml'
 
 
 if __name__ == "__main__":
@@ -27,8 +29,9 @@ if __name__ == "__main__":
         dim_feedforward=cfg.dim_feedforward,
         dropout=cfg.dropout,
         max_seq_len=cfg.max_seq_len,
-        layer_norm_eps=cfg.layer_norm_eps
-    ).to(device)
+        layer_norm_eps=cfg.layer_norm_eps,
+        activation=cfg.activation
+    ).to(cfg.torch_device)
 
     dummy_input = torch.randn(
         BATCH, SEQ_LEN, cfg.std_vect_dim, device=cfg.torch_device
@@ -41,3 +44,5 @@ if __name__ == "__main__":
         output = model(dummy_input, src_key_padding_mask=padding_mask)
 
     print("Output shape:", output.shape)  # (2, 128, 1024)
+
+    
