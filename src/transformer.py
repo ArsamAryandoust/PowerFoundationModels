@@ -9,8 +9,7 @@ import torch.nn.functional as F
 
 class PositionalEncoding(nn.Module):
     """
-    Encode positions with standard sine–cosine alternation as in Vaswani et al,
-    2017.
+    Encode positions with sine–cosine alternation like in Vaswani et al, 2017.
 
     Parameters
     ----------
@@ -103,6 +102,7 @@ class TransformerBackbone(nn.Module):
         -------
         torch.Tensor
             Encoded sequence, same shape as input.
+
         """
         x = self.pos_enc(tokens)
         x = self.encoder(x, src_key_padding_mask=src_key_padding_mask)
