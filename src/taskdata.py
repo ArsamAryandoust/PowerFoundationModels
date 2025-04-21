@@ -7,11 +7,17 @@ from ai4climate import load
 def load_all(
     cfg: "configuration.ExperimentConfiguration",
     path_data_root: str
-):
+) -> dict:
     """Load all requested task datsets.
     
-    """
+    Parameters:
+    -----------
+    cfg : configuration.ExperimentConfiguration
+        Class object bundling all experiment configurations.
+    path_data_root : 
+        Path to root directory of stored data.
 
+    """
     # overwrite where requested
     opfdata_taskdata = None
     powergraph_taskdata = None
@@ -50,9 +56,9 @@ def load_all(
             data_frac = cfg.data_frac
         )
 
-    return (
-        opfdata_taskdata,
-        powergraph_taskdata,
-        solarcube_taskdata,
-        buildingelectricity_taskdata
-    )
+    return {
+        'opfdata_taskdata': opfdata_taskdata,
+        'powergraph_taskdata': powergraph_taskdata,
+        'solarcube_taskdata': solarcube_taskdata,
+        'buildingelectricity_taskdata': buildingelectricity_taskdata
+    }

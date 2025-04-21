@@ -16,6 +16,7 @@ sys.path.append('ai4climate')
 import configuration
 import transformer
 import taskdata
+import training
 
 PATH_CONFIG = 'config.yml'
 PATH_DATA_ROOT = '../donti_group_shared/AI4Climate/processed/'
@@ -25,12 +26,7 @@ def main():
     cfg = configuration.ExperimentConfiguration(PATH_CONFIG)
     
     # load task datasets
-    (
-        opfdata_taskdata,
-        powergraph_taskdata,
-        solarcube_taskdata,
-        buildingelectricity_taskdata
-    ) = taskdata.load_all(cfg, PATH_DATA_ROOT)
+    taskdata_dict = taskdata.load_all(cfg, PATH_DATA_ROOT)
 
     # initialize model
     model = transformer.TransformerBackbone(
@@ -44,22 +40,13 @@ def main():
         activation=cfg.activation
     ).to(cfg.torch_device)
 
-    # Placeholder tests for model
-    BATCH = 2
-    SEQ_LEN = 128
-
-    dummy_input = torch.randn(
-        BATCH, SEQ_LEN, cfg.std_vect_dim, device=cfg.torch_device
+    # train model
+    training.train_model(
+        cfg, 
+        model,
+        taskdata_dict,
+        save=False
     )
-    padding_mask = torch.zeros(
-        BATCH, SEQ_LEN, dtype=torch.bool, device=cfg.torch_device
-    )
-
-    with torch.no_grad():
-        output = model(dummy_input, src_key_padding_mask=padding_mask)
-
-    print("Output shape:", output.shape)  # (2, 128, 1024)
-
 
 if __name__ == "__main__":
     main()
