@@ -65,10 +65,16 @@ def load(
     del data_dict
     gc.collect()
 
+    # Load natural language descriptions
+    task_description    = _create_taskdescription()
+    subtask_description = _create_subtaskdescription(subtask_name)
+
     return {
         'train_data': train_data,
         'val_data': val_data,
-        'test_data': test_data
+        'test_data': test_data,
+        'task_description': task_description,
+        'subtask_description': subtask_description
     }
 
 
@@ -251,3 +257,57 @@ def _load_json_files(
         gc.collect()
 
     return combined_data_dict
+
+
+def _create_taskdescription():
+    """Contains natural language description of task. Placeholder."""
+
+    task_description = """
+    Given the steady state of a power system at a snapshot in time, our goal in 
+    PowerGraph is to predict the possibility and resulting characteristics of a 
+    cascading failure, which is the outage of a grid component that triggers a 
+    chain reaction of subsequent outages.
+
+    Improving the computational speed of this analysis allows power system 
+    operators to more frequently assess and revise control actions on their grid, 
+    and thereby better prevent failure modes associated with the integration of 
+    fluctuating renewable energy sources.
+
+    The main physical law that solutions to this task must satisfy is Kirchhoff's 
+    Current Law.
+
+    We define four sub-task datasets, each sharing the same input but differing 
+    in the predicted characteristic of a cascading failure, which serves as the 
+    label. Specifically, we distinguish:
+
+    cascading_failure_binary: A binary classification task predicting the 
+    probability of a cascading failure.
+
+    cascading_failure_multiclass: A multi-class classification task predicting 
+    the probability of four distinct combinations of cascading failures and 
+    demand-not-served scenarios: demand not served larger than zero and cascading 
+    failure occurs, demand not served larger than zero and no cascading failure 
+    occurs, demand not served is zero and cascading failure occurs, demand not 
+    served is zero and no cascading failure occurs.
+
+    demand_not_served_regression: A regression task predicting the amount of 
+    power demand left unserved due to a potential cascading failure.
+
+    cascading_failure_sequence: A sequential prediction task forecasting the 
+    order in which transmission lines may fail during a cascading failure.
+    """
+
+    return task_description
+
+
+
+def _create_subtaskdescription(subtask_name: str):
+    """Contains natural language description of subtask. Placeholder."""
+
+    subtask_description = f"""
+    Here, we are solving instances of the {subtask_name} subtask.
+    """.format(subtask_name)
+    
+    return subtask_description
+
+
