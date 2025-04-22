@@ -134,9 +134,9 @@ def load(
         'eq_difference': eq_difference
     }
 
-    # 6) Load NLP descriptions
-    task_description    = create_taskdescription()
-    subtask_description = create_subtaskdescription(subtask_name)
+    # 6) Load natural language descriptions
+    task_description    = _create_taskdescription()
+    subtask_description = _create_subtaskdescription(subtask_name)
 
     # 7) Return task data dictionary
     subtask_data = {
@@ -509,11 +509,8 @@ def ineq_upper_box(x_value, x_upper):
 def eq_difference(x_value, x_true_value):
     return x_value - x_true_value
 
-
-
-
-def create_taskdescription():
-    """Placeholder for trask description in NLP."""
+def _create_taskdescription():
+    """Contains natural language description of task. Placeholder."""
 
     task_description = """
     Given the specifications of an electric power system at a single point in 
@@ -562,8 +559,8 @@ def create_taskdescription():
 
 
 
-def create_subtaskdescription(subtask_name: str):
-    """ """
+def _create_subtaskdescription(subtask_name: str):
+    """Contains natural language description of subtask. Placeholder."""
 
     subtask_description = f"""
     Here, we are solving instances of the {subtask_name} subtask.
@@ -572,4 +569,3 @@ def create_subtaskdescription(subtask_name: str):
     return subtask_description
 
 
-    

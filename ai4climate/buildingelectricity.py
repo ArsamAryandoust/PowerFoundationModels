@@ -115,13 +115,19 @@ def load(
         seed
     )
 
+    # Load natural language descriptions
+    task_description    = _create_taskdescription()
+    subtask_description = _create_subtaskdescription(subtask_name)
+
     # bundle to training validation and testing data
     subtask_data = {
         'train_data': train_data,
         'val_data': val_data,
         'test_data': test_data,
         'building_images': building_images,
-        'cluster_images': cluster_images
+        'cluster_images': cluster_images,
+        'task_description': task_description,
+        'subtask_description': subtask_description
     }
 
     return subtask_data
@@ -570,3 +576,58 @@ def _load_cluster_images(local_dir):
         cluster_image_dict[zoom_level] = image_type_dict
 
     return cluster_image_dict
+
+def _create_taskdescription():
+    """Contains natural language description of task. Placeholder."""
+
+    task_description = """
+    Given the aerial image of a building and the meteorological conditions in 
+    the region of that building for a past time window of 24 hours, the goal in 
+    BuildingElectricity is to predict the electric load profile of single 
+    buildings for a future time window of 24 hours.
+
+    This is a short-term spatial demand forecasting challenge, where accurate 
+    can significantly support the planning and dispatch of distributed renewable 
+    energy sources, such as rooftop photovoltaics and micro-wind turbines, the 
+    allocation and sizing of storage capacities, and the coordination of flexible 
+    loads through demand response programs.
+
+    The primary underlying pattern governing this task is the circadian rhythm 
+    of human behavior, a weak but consistent physical law that shapes daily 
+    electricity demand.
+
+    We distinguish six sub-tasks, a first set containing data points from 92 
+    different buildings and a second set containing data points from 451 
+    different buildings:
+
+    odd_time_buildings92: Predict electric load profiles from 92 buildings, 
+    with test time stamps not present in training data.
+
+    odd_space_buildings92: Predict electric load profiles from 92 buildings,
+    with test buildings not present in training data.
+
+    odd_spacetime_buildings92: Predict electric load profiles from 92 buildings, 
+    with test time stamps and buildings not present in training data.
+
+    odd_time_buildings451: Predict electric load profiles from 451 buildings,
+    with test time stamps not present in training data.
+
+    odd_space_buildings451: Predict electric load profiles from 451 buildings, 
+    with test buildings not present in training data.
+
+    odd_spacetime_buildings451: Predict electric load profiles from 451
+    buildings, with test buildings and time stamps not present in training data.
+    """
+
+    return task_description
+
+def _create_subtaskdescription(subtask_name: str):
+    """Contains natural language description of subtask. Placeholder."""
+
+    subtask_description = f"""
+    Here, we are solving instances of the {subtask_name} subtask.
+    """.format(subtask_name)
+    
+    return subtask_description
+
+    

@@ -116,10 +116,16 @@ def load(
     del paired_dataset
     gc.collect()
 
+    # Load natural language descriptions
+    task_description    = _create_taskdescription()
+    subtask_description = _create_subtaskdescription(subtask_name)
+
     return {
         'train_data': train_data,
         'val_data': val_data,
-        'test_data': test_data
+        'test_data': test_data,
+        'task_description': task_description,
+        'subtask_description': subtask_description
     }
 
 
@@ -571,3 +577,65 @@ def _load_hdf5_data(
             satellite_images_dict[station_name] = data
 
     return satellite_images_dict
+
+def _create_taskdescription():
+    """Contains natural language description of task. Placeholder."""
+
+    task_description = """
+    Given geostationary satellite imagery, physics-based simulations of solar 
+    radiation, and geographic information of a specific region on Earth for the 
+    past 24 hours at a snapshot in time, our goal is to predict the total 
+    shortwave solar radiation reaching Earth's horizontal surface with 15 minute 
+    temporal and 5 kilometer spatial resolution for 24 hours into the future.
+
+    Improving solutions for this forecasting task will enable power system 
+    operators to plan and dispatch resources more efficiently, reducing reliance 
+    on backup storage, new transmission lines, and costly peak power plants, key 
+    requirements for integrating high shares of fluctuating and uncertain solar 
+    power into the grid.
+
+    The fundamental physical principles shaping solutions to this task include 
+    fluid mechanics, as well as diurnal and seasonal cycles.
+
+    We define six forecasting sub-tasks, each utilizing the same geostationary 
+    satellite images and augmented features as inputs but differing along two 
+    key dimensions: (i) whether the prediction targets point-based or area-based 
+    solar radiation, and (ii) whether unseen time stamps, geographic areas, or 
+    both, are included in the test set. These distinctions result in the following 
+    sub-task datasets:
+
+    odd_time_area: Predict area-based solar radiation using satellite 
+    images and physics-based simulations, with test time stamps not present in 
+    training data.
+
+    odd_space_area: Predict area-based solar radiation using 
+    satellite images and physics-based simulations, with test areas not present 
+    in training data.
+
+    odd_spacetime_area: Predict area-based solar radiation using 
+    satellite images and physics-based simulations, with test areas and time 
+    stamps not present in training data.
+
+    odd_time_point: Predict point-based solar radiation using satellite images 
+    and ground station measurements, with test time stamps not present in 
+    training data.
+
+    odd_space_point: Predict point-based solar radiation using satellite images 
+    and ground station measurements, with test areas not present in training 
+    data.
+
+    odd_spacetime_point: Predict point-based solar radiation using satellite 
+    images and ground station measurements, with test areas and time stamps not 
+    present in training data.
+    """
+
+    return task_description
+
+def _create_subtaskdescription(subtask_name: str):
+    """Contains natural language description of subtask. Placeholder."""
+
+    subtask_description = f"""
+    Here, we are solving instances of the {subtask_name} subtask.
+    """.format(subtask_name)
+    
+    return subtask_description
