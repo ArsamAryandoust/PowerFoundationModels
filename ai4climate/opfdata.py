@@ -134,12 +134,18 @@ def load(
         'eq_difference': eq_difference
     }
 
-    # 6) Return task data dictionary
+    # 6) Load NLP descriptions
+    task_description    = create_taskdescription()
+    subtask_description = create_subtaskdescription(subtask_name)
+
+    # 7) Return task data dictionary
     subtask_data = {
         'train_data': train_dataset,
         'val_data': val_dataset,
         'test_data': test_dataset,
         'loss_functions': loss_functions,
+        'task_description': task_description,
+        'subtask_description': subtask_description
     }
     return subtask_data
 
@@ -502,3 +508,68 @@ def ineq_upper_box(x_value, x_upper):
 
 def eq_difference(x_value, x_true_value):
     return x_value - x_true_value
+
+
+
+
+def create_taskdescription():
+    """Placeholder for trask description in NLP."""
+
+    task_description = """
+    Given the specifications of an electric power system at a single point in 
+    time, the goal in solving Alternating Current Optimal Power Flow (ACOPF)
+    problem instances with ML is to predict the most cost-effective power output 
+    for a set of generators while ensuring compliance with physical constraints.
+
+    This problem, an NP-hard optimization challenge, is traditionally solved 
+    using non-ML methods by power system operators. Enhancing its solution speed
+    and optimality through ML can significantly improve the planning and 
+    real-time dispatch of high-renewable power systems, which inherently face 
+    greater supply uncertainty than today's fossil fuel-dominated power systems.
+
+    The fundamental physical law that each solution has to satisfy is 
+    Kirchhoff's Current Law.
+
+    We define six sub-task datasets, each designed to evaluate the generalization 
+    capabilities of solution methods across varying power system topologies. The 
+    overall dataset comprises problem instances from ten different power system 
+    topologies, with distinct training, validation, and testing splits based on 
+    topology size. Each sub-task involves training and validation on a subset of 
+    either small, medium, or large topologies while testing on a different subset, 
+    enabling a structured assessment of scalability and transferability. These 
+    are:
+
+    train_small_test_medium: Training and validation data from 14-, 30-, and 
+    57-bus systems, tested on 118-, 500-, and 2,000-bus systems.
+
+    train_small_test_large: Training and validation data from 14-, 30-, and 
+    57-bus systems, tested on 4,661-, 6,470-, 10,000-, and 13,659-bus systems.
+
+    train_medium_test_small: Training and validation data from 118-, 500-, and 
+    2,000-bus systems, tested on 14-, 30-, and 57-bus systems.
+
+    train_medium_test_large: Training and validation data from 118-, 500-, and 
+    2,000-bus systems, tested on 4,661-, 6,470-, 10,000-, and 13,659-bus systems.
+
+    train_large_test_small: Training and validation data from 4,661-, 6,470-, 
+    10,000-, and 13,659-bus systems, tested on 14-, 30-, and 57-bus systems.
+
+    train_large_test_medium: Training and validation data from 4,661-, 6,470-, 
+    10,000-, and 13,659-bus systems, tested on 118-, 500-, and 2,000-bus systems.
+    """
+
+    return task_description
+
+
+
+def create_subtaskdescription(subtask_name: str):
+    """ """
+
+    subtask_description = f"""
+    Here, we are solving instances of the {subtask_name} subtask.
+    """.format(subtask_name)
+    
+    return subtask_description
+
+
+    
