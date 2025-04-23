@@ -1,4 +1,4 @@
-"""Contains transofmer backbone model.
+"""Contains all components of MultiSenseNet model.
 
 """
 import math
@@ -6,6 +6,38 @@ import hashlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+def make_model(
+    cfg: "congifuration.ExperimentConfiguration",
+    taskname: str
+): 
+    """
+    Make Multisensenet model.
+
+    Parameters
+    ----------
+    cfg : congifuration.ExperimentConfiguration
+        Class object that bundles configurations for experiment.
+    taskname : str
+        
+    """
+    # initialize model
+    model = TransformerBackbone(
+        std_vect_dim=cfg.std_vect_dim,
+        n_heads=cfg.n_heads,
+        n_layers=cfg.n_layers,
+        dim_feedforward=cfg.dim_feedforward,
+        dropout=cfg.dropout,
+        max_seq_len=cfg.max_seq_len,
+        layer_norm_eps=cfg.layer_norm_eps,
+        activation=cfg.activation
+    ).to(cfg.torch_device)
+
+
+    return model 
+
+
+
 
 def _make_delim(
     tag: str, 
@@ -16,8 +48,8 @@ def _make_delim(
     from a textual tag.  The SHA‑256 hash gives a reproducible 32‑byte seed,
     which is reduced to 32 bits and used to seed an independent RNG.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     tag : str
         Tag that indicates which delimiter to generator. Used by RNG.
     std_vect_dim : int
@@ -25,7 +57,7 @@ def _make_delim(
         backbone model. Used by RNG.
     
     Returns:
-    -----------
+    ----------
     vec : torch.Tensor
         Unique and deterministically reproducible delimiter token for requested
         tag and std_vect_dim. 
@@ -94,7 +126,7 @@ class PositionalEncoding(nn.Module):
             Shape (batch, seq_len, std_vect_dim).
 
         Returns
-        -------
+        ----------
         torch.Tensor
             Input plus position encodings, same shape.
 
@@ -146,7 +178,7 @@ class TransformerBackbone(nn.Module):
             Shape (batch, seq_len); True for PAD positions to ignore.
 
         Returns
-        -------
+        ----------
         torch.Tensor
             Encoded sequence, same shape as input.
 

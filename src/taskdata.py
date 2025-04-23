@@ -14,7 +14,7 @@ def load_all(
     -----------
     cfg : configuration.ExperimentConfiguration
         Class object bundling all experiment configurations.
-    path_data_root : 
+    path_data_root : str
         Path to root directory of stored data.
 
     """

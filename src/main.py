@@ -14,7 +14,6 @@ sys.path.append('.')
 sys.path.append('ai4climate')
 
 import configuration
-import transformer
 import taskdata
 import training
 
@@ -28,24 +27,11 @@ def main():
     # load task datasets
     taskdata_dict = taskdata.load_all(cfg, PATH_DATA_ROOT)
 
-    # initialize model
-    model = transformer.TransformerBackbone(
-        std_vect_dim=cfg.std_vect_dim,
-        n_heads=cfg.n_heads,
-        n_layers=cfg.n_layers,
-        dim_feedforward=cfg.dim_feedforward,
-        dropout=cfg.dropout,
-        max_seq_len=cfg.max_seq_len,
-        layer_norm_eps=cfg.layer_norm_eps,
-        activation=cfg.activation
-    ).to(cfg.torch_device)
-
     # train model
     training.train_model(
-        cfg, 
-        model,
+        cfg,
         taskdata_dict,
-        save=False
+        update_models=True
     )
 
 if __name__ == "__main__":
