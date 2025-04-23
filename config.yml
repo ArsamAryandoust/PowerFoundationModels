@@ -3,10 +3,10 @@ seed: 7
 torch_anomaly_detection: True
 
 ### Task data
-opfdata: True
+opfdata: False
 powergraph: True
-solarcube: True
-buildingelectricity: True
+solarcube: False
+buildingelectricity: False
 data_frac: 0.01
 
 ### Subtask choice
@@ -31,4 +31,4 @@ activation: gelu
 dtype: float64
 device_gpu: True
 batch: 2
-
+epochs: 10
