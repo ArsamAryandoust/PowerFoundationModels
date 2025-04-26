@@ -39,3 +39,4 @@ python src/main.py
 2. [PowerGraph](docs/powergraph.md)
 3. [SolarCube](docs/solarcube.md)
 4. [BuildingElectricity](docs/buildingelectricity.md)
+5. [WindFarm](docs/windfarm.md)
