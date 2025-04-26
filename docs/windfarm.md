@@ -3,22 +3,27 @@
 ## Load standardized task data
 
 You can both download and load all data associated with standardized WindFarm
-tasks in the following fashion. For example, load the `XXXX` sub-task with:
+tasks in the following fashion. For example, load the `odd_time_predict48h` 
+sub-task with:
 
 ```Python
 from ai4climate import load_task
 
 dataset = load_task(
     task_name='WindFarm', 
-    subtask_name='XXXX',
+    subtask_name='odd_time_predict48h',
     root_path='~/AI4Climate/'
 )
 ```
 
 Available sub-tasks are:
-- `XXXX`
-- `XXXX`
-- `XXXX`
+- `odd_time_predict48h`
+- `odd_space_predict48h`
+- `odd_spacetime_predict48h`
+- `odd_time_predict72h`
+- `odd_space_predict72h`
+- `odd_spacetime_predict72h`
+
 
 ## Download raw task data
 
