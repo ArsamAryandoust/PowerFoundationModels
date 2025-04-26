@@ -23,12 +23,14 @@ import opfdata
 import powergraph
 import solarcube
 import buildingelectricity
+import windfarm
 
 LIST_AVAIL_TASKNAMES = [
     'OPFData',
     'PowerGraph',
     'SolarCube',
-    'BuildingElectricity'
+    'BuildingElectricity',
+    'WindFarm'
 ]
 
 def load_task(
@@ -116,6 +118,14 @@ def _load_subtask(
         )
     elif 'BuildingElectricity' in local_dir:
         subtask_data = buildingelectricity.load(
+            local_dir,
+            subtask_name,
+            data_frac,
+            train_frac,
+            max_workers
+        )
+    elif 'WindFarm' in local_dir:
+        subtask_data = windfarm.load(
             local_dir,
             subtask_name,
             data_frac,
