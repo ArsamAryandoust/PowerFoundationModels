@@ -3,14 +3,13 @@
 """
 import torch
 
-import dataprocessing
+import preprocess
 import multisensenet
-
 
 def train_model(
     cfg: "congifuration.ExperimentConfiguration",
     taskdata_dict: dict,
-    update_models: bool
+    update: bool
 ):
     """ 
     Train backbone network and encoder parts.
@@ -21,7 +20,7 @@ def train_model(
         Class object that bundles configurations for experiment.
     taskdata_dict : dict
         Task data loaded as requested by user.
-    update_models : bool 
+    update : bool 
         Whether or not to save updates to model weights.
 
     """
@@ -31,9 +30,9 @@ def train_model(
             continue
         
         # prepare data
-        taskdata = dataprocessing.standardize(cfg, taskname, taskdata)
+        taskdata = preprocess.standardize(cfg, taskname, taskdata)
 
-        # create model instance
+        # create model instance for this task
         model = multisensenet.make_model(cfg, taskname)
         
         # enter epochs
@@ -45,7 +44,7 @@ def train_model(
                 _exec_epoch(cfg, taskdata, model, mode='test')
 
             # training
-            _exec_epoch(cfg, taskdata, model, mode='train')
+            _exec_epoch(cfg, taskdata, model, mode='train', update=update)
 
 
 def _exec_epoch(
@@ -53,12 +52,15 @@ def _exec_epoch(
     taskdata: dict,
     model: "multisensenet.TransformerBackbone",
     mode: str,
+    update='False'
 ):
-    """ """
+    """
+    Execute single epoch either in train or validation mode.
+
+    """
     # set model according to mode
     model.train() if mode == 'train' else model.eval() 
 
-    
     # get data
     dummy_input = taskdata['dummy_input']
     padding_mask = taskdata['padding_mask']

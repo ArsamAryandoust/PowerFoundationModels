@@ -10,16 +10,20 @@ import torch.nn.functional as F
 def make_model(
     cfg: "congifuration.ExperimentConfiguration",
     taskname: str
-): 
+) -> "torch.nn.Module": 
     """
-    Make Multisensenet model.
+    Create MultiSenseNet model instance.
 
     Parameters
     ----------
     cfg : congifuration.ExperimentConfiguration
         Class object that bundles configurations for experiment.
     taskname : str
-        
+
+    Returns
+    ----------
+    model : torch.nn.Module
+
     """
     # initialize model
     model = TransformerBackbone(
@@ -32,11 +36,9 @@ def make_model(
         layer_norm_eps=cfg.layer_norm_eps,
         activation=cfg.activation
     ).to(cfg.torch_device)
-
+    
 
     return model 
-
-
 
 
 def _make_delim(
@@ -63,19 +65,19 @@ def _make_delim(
         tag and std_vect_dim. 
 
     """
-    # 1. hash “tag:dim” → 32‑byte hex, keep first 8 hex chars → 32‑bit int
+    # 1. hash "tag:dim" - 32-byte hex, keep first 8 hex chars - 32-bit int
     seed = int(hashlib.sha256(f"{tag}:{std_vect_dim}".encode()).hexdigest()[:8], 16)
     gen = torch.Generator()
-    gen.manual_seed(seed)                       # reproducible, tag‑specific
-    vec = torch.randn(std_vect_dim, generator=gen)   # N(0, 1), same scale as normal tokens
-    vec = F.normalize(vec, p=2, dim=0)          # ‖vec‖₂ = 1  (optional but good)
+    gen.manual_seed(seed)                       # reproducible, tag-specific
+    vec = torch.randn(std_vect_dim, generator=gen)   # N(0, 1), same scale as normal tokens
+    vec = F.normalize(vec, p=2, dim=0)          # ||vec||_2 = 1  (optional but good)
 
     return vec
 
 
 class PositionalEncoding(nn.Module):
     """
-    Encode positions with sine–cosine alternation like in Vaswani et al, 2017.
+    Encode positions with sine-cosine alternation like in Vaswani et al, 2017.
 
     Parameters
     ----------
@@ -136,7 +138,7 @@ class PositionalEncoding(nn.Module):
 
 class TransformerBackbone(nn.Module):
     """
-    Transformer encoder for fixed‑width (std_vect_dim-D) token sequences.
+    Transformer encoder for fixed-width (std_vect_dim-D) token sequences.
 
     """
     def __init__(
