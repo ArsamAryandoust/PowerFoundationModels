@@ -58,7 +58,6 @@ def _exec_epoch(
     # set model according to mode
     model.train() if mode == 'train' else model.eval() 
 
-    
     # get data
     dummy_input = taskdata['dummy_input']
     padding_mask = taskdata['padding_mask']

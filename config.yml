@@ -2,18 +2,23 @@
 seed: 7
 torch_anomaly_detection: True
 
-### Task data
+### Task choice
 opfdata: False
 powergraph: True
 solarcube: False
 buildingelectricity: False
-data_frac: 0.01
+windfarm: False
 
 ### Subtask choice
 opfdata_subtask: 'train_small_test_medium'
 powergraph_subtask: 'demand_not_served_regression'
 solarcube_subtask: 'odd_time_area'
 buildingelectricity_subtask: 'odd_time_buildings92'
+windfarm_subtask: 'odd_time_predict48h'
+
+### Data
+data_frac: 0.01
+train_frac: 1
 
 ### Canonical data representation
 std_vect_dim: 512

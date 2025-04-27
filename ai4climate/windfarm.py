@@ -1,4 +1,7 @@
-"""Loads requested subtask for WindFarm.
+"""Loads standardized subtasks for WindFarm.
+
+See for a full documentation of task and subtask data:
+https://github.com/ArsamAryandoust/AI4Climate/blob/master/docs/windfarm.md
 
 """
 import os
@@ -213,7 +216,11 @@ def _split_data(
                     feat[col] = hist_block[:, col_idx].tolist()
 
                 label_seq = labels[h_end:p_end].tolist()
-                records.append({"features": feat, "label": label_seq})
+
+                lbl: Dict[str, Any] = {
+                    "Patv": label_seq
+                }
+                records.append({"features": feat, "label": lbl})
 
         return records
 
