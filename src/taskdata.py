@@ -17,6 +17,11 @@ def load_all(
     path_data_root : str
         Path to root directory of stored data.
 
+    Parameters:
+    -----------
+    dict
+        Dictionary containing all requested task datasets.
+
     """
     # overwrite where requested
     opfdata_taskdata = None
@@ -29,7 +34,8 @@ def load_all(
             'OPFData', 
             cfg.opfdata_subtask,
             path_data_root,
-            data_frac = cfg.data_frac
+            data_frac = cfg.data_frac,
+            train_frac = cfg.train_frac
         )
 
     if cfg.powergraph:
@@ -37,7 +43,8 @@ def load_all(
             'PowerGraph', 
             cfg.powergraph_subtask,
             path_data_root,
-            data_frac = cfg.data_frac
+            data_frac = cfg.data_frac,
+            train_frac = cfg.train_frac
         )
 
     if cfg.solarcube:
@@ -45,7 +52,8 @@ def load_all(
             'SolarCube', 
             cfg.solarcube_subtask,
             path_data_root,
-            data_frac = cfg.data_frac
+            data_frac = cfg.data_frac,
+            train_frac = cfg.train_frac
         )
 
     if cfg.buildingelectricity:
@@ -53,12 +61,23 @@ def load_all(
             'BuildingElectricity', 
             cfg.buildingelectricity_subtask,
             path_data_root,
-            data_frac = cfg.data_frac
+            data_frac = cfg.data_frac,
+            train_frac = cfg.train_frac
         )
 
+    if cfg.windfarm:
+        windfarm_taskdata = load.load_task(
+            'WindFarm',
+            cfg.windfarm_taskdata,
+            path_data_root,
+            data_frac = cfg.data_frac,
+            train_frac = cfg.train_frac
+        )
+        
     return {
         'opfdata_taskdata': opfdata_taskdata,
         'powergraph_taskdata': powergraph_taskdata,
         'solarcube_taskdata': solarcube_taskdata,
-        'buildingelectricity_taskdata': buildingelectricity_taskdata
+        'buildingelectricity_taskdata': buildingelectricity_taskdata,
+        'windfarm': windfarm_taskdata
     }

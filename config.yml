@@ -4,10 +4,10 @@ torch_anomaly_detection: True
 
 ### Task choice
 opfdata: False
-powergraph: True
+powergraph: False
 solarcube: False
 buildingelectricity: False
-windfarm: False
+windfarm: True
 
 ### Subtask choice
 opfdata_subtask: 'train_small_test_medium'
