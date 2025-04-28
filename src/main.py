@@ -31,7 +31,7 @@ def main():
     training.train_model(
         cfg,
         taskdata_dict,
-        update_models=True
+        update=True
     )
 
 if __name__ == "__main__":
