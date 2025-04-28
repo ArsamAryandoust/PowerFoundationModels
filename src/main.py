@@ -1,4 +1,4 @@
-"""Main entry point to program for running experiments associated with research.
+"""Main entry point to program for running experiments.
 
 Example usage:
 --------------

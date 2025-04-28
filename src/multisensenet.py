@@ -41,8 +41,6 @@ def make_model(
     return model
 
 
-
-
 class PositionalEncoding(nn.Module):
     """
     Encode positions with sine-cosine alternation like in Vaswani et al, 2017.
@@ -79,15 +77,15 @@ class PositionalEncoding(nn.Module):
         # They live on the same vector space as ordinary tokens,
         # but are *buffers* (fixed), not trainable parameters.
         self.register_buffer("task_description_delimtoken",
-            self._make_delim("TASK_DESC", std_vect_dim))
+            self.make_delim("TASK_DESC", std_vect_dim))
         self.register_buffer("data_point_delimtoken",
-            self._make_delim("DATA_POINT", std_vect_dim))
+            self.make_delim("DATA_POINT", std_vect_dim))
         self.register_buffer("modality_description_delimtoken",
-            self._make_delim("MODALITY_DESC", std_vect_dim))
+            self.make_delim("MODALITY_DESC", std_vect_dim))
         self.register_buffer("numeric_modality_delimtoken",
-            self._make_delim("NUMERIC_MODALITY", std_vect_dim))
+            self.make_delim("NUMERIC_MODALITY", std_vect_dim))
 
-    def _make_delim(
+    def make_delim(
         self,
         tag: str, 
         std_vect_dim: int
