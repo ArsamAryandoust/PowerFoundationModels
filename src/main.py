@@ -6,7 +6,7 @@ $ python src/main.py
 
 """
 import os
-import sys 
+import sys
 
 import torch
 
@@ -16,9 +16,11 @@ sys.path.append('ai4climate')
 import configuration
 import taskdata
 import training
+import save
 
 PATH_CONFIG = 'config.yml'
 PATH_DATA_ROOT = '../donti_group_shared/AI4Climate/processed/'
+PATH_RESULTS = 'results/'
 
 def main():
     # parse experiment configurations into dictionary
@@ -33,6 +35,10 @@ def main():
         taskdata_dict,
         update=True
     )
+
+    # save configuration and results
+    save.all_results(PATH_RESULTS, cfg)
+
 
 if __name__ == "__main__":
     main()

@@ -68,7 +68,7 @@ def load_all(
     if cfg.windfarm:
         windfarm_taskdata = load.load_task(
             'WindFarm',
-            cfg.windfarm_taskdata,
+            cfg.windfarm_subtask,
             path_data_root,
             data_frac = cfg.data_frac,
             train_frac = cfg.train_frac

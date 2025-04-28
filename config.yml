@@ -1,4 +1,5 @@
 ### General
+exp_name: test 
 seed: 7
 torch_anomaly_detection: True
 
@@ -32,7 +33,7 @@ max_seq_len: 4096
 layer_norm_eps: 1.e-5
 activation: gelu
 
-### Training Loop
+### Training loop
 dtype: float64 # choose float64 or float32
 device_gpu: True
 batch: 2

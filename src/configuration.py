@@ -55,28 +55,21 @@ class ExperimentConfiguration:
         # set global random seed.
         self._set_random_seed()
 
-        # test configs before continuing.
-        self.run_tests()
-
-    def run_tests(self):
-        """Test configurations before continuing."""
-        # placeholder
-
-        print("All tests for configuration passed!")
-
-
     def revert_configs(self):
-        """Delete configs with non-string types we cannot store in json."""
-
+        """
+        Delete configs with non-string types we cannot store in json.
+        
+        """
         del self.torch_device
         del self.np_dtype
 
     def _set_random_seed(self):
-        """Set global seed for all relevant random processes."""
-
+        """
+        Set global seed for all relevant random processes.
+        
+        """
         random.seed(self.seed)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
         if self.torch_device == torch.device('cuda'):
             torch.cuda.manual_seed_all(self.seed)
-
