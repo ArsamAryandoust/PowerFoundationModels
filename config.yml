@@ -23,7 +23,7 @@ train_frac: 1
 ### Canonical data representation
 std_vect_dim: 512
 
-### Transformer backbone architecture
+### MultiSenseNet
 n_heads: 16
 n_layers: 12
 dim_feedforward: 4096
@@ -33,7 +33,7 @@ layer_norm_eps: 1.e-5
 activation: gelu
 
 ### Training Loop
-dtype: float64
+dtype: float64 # choose float64 or float32
 device_gpu: True
 batch: 2
 epochs: 10

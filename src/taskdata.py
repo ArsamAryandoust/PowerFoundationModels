@@ -10,14 +10,14 @@ def load_all(
 ) -> dict:
     """Load all requested task datsets.
     
-    Parameters:
+    Parameters
     -----------
     cfg : configuration.ExperimentConfiguration
         Class object bundling all experiment configurations.
     path_data_root : str
         Path to root directory of stored data.
 
-    Parameters:
+    Returns
     -----------
     dict
         Dictionary containing all requested task datasets.
@@ -79,5 +79,5 @@ def load_all(
         'powergraph_taskdata': powergraph_taskdata,
         'solarcube_taskdata': solarcube_taskdata,
         'buildingelectricity_taskdata': buildingelectricity_taskdata,
-        'windfarm': windfarm_taskdata
+        'windfarm_taskdata': windfarm_taskdata
     }

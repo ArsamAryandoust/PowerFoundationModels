@@ -1,6 +1,6 @@
 """Main entry point to program for running experiments.
 
-Example usage:
+Example usage
 --------------
 $ python src/main.py
 
