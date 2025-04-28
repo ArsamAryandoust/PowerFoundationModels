@@ -1,4 +1,4 @@
-"""Contains all components of MultiSenseNet model.
+"""Contains all components of MultiSenseNet.
 
 """
 import math
@@ -36,43 +36,9 @@ def make_model(
         layer_norm_eps=cfg.layer_norm_eps,
         activation=cfg.activation
     ).to(cfg.torch_device)
-    
-
-    return model 
 
 
-def _make_delim(
-    tag: str, 
-    std_vect_dim: int
-) -> torch.Tensor:
-    """
-    Deterministically generate a delimiter vector of length `std_vect_dim`
-    from a textual tag.  The SHA‑256 hash gives a reproducible 32‑byte seed,
-    which is reduced to 32 bits and used to seed an independent RNG.
-
-    Parameters
-    ----------
-    tag : str
-        Tag that indicates which delimiter to generator. Used by RNG.
-    std_vect_dim : int
-        Dimension of canonical data format vectors expected by Transformer 
-        backbone model. Used by RNG.
-    
-    Returns:
-    ----------
-    vec : torch.Tensor
-        Unique and deterministically reproducible delimiter token for requested
-        tag and std_vect_dim. 
-
-    """
-    # 1. hash "tag:dim" - 32-byte hex, keep first 8 hex chars - 32-bit int
-    seed = int(hashlib.sha256(f"{tag}:{std_vect_dim}".encode()).hexdigest()[:8], 16)
-    gen = torch.Generator()
-    gen.manual_seed(seed)                       # reproducible, tag-specific
-    vec = torch.randn(std_vect_dim, generator=gen)   # N(0, 1), same scale as normal tokens
-    vec = F.normalize(vec, p=2, dim=0)          # ||vec||_2 = 1  (optional but good)
-
-    return vec
+    return model
 
 
 class PositionalEncoding(nn.Module):
@@ -111,13 +77,47 @@ class PositionalEncoding(nn.Module):
         # They live on the same vector space as ordinary tokens,
         # but are *buffers* (fixed), not trainable parameters.
         self.register_buffer("task_description_delimtoken",
-            _make_delim("TASK_DESC", std_vect_dim))
+            self.make_delim("TASK_DESC", std_vect_dim))
         self.register_buffer("data_point_delimtoken",
-            _make_delim("DATA_POINT", std_vect_dim))
+            self.make_delim("DATA_POINT", std_vect_dim))
         self.register_buffer("modality_description_delimtoken",
-            _make_delim("MODALITY_DESC", std_vect_dim))
+            self.make_delim("MODALITY_DESC", std_vect_dim))
         self.register_buffer("numeric_modality_delimtoken",
-            _make_delim("NUMERIC_MODALITY", std_vect_dim))
+            self.make_delim("NUMERIC_MODALITY", std_vect_dim))
+
+    def make_delim(
+        self,
+        tag: str, 
+        std_vect_dim: int
+    ) -> torch.Tensor:
+        """
+        Deterministically generate a delimiter vector of length `std_vect_dim`
+        from a textual tag.  The SHA‑256 hash gives a reproducible 32‑byte seed,
+        which is reduced to 32 bits and used to seed an independent RNG.
+
+        Parameters
+        ----------
+        tag : str
+            Tag that indicates which delimiter to generator. Used by RNG.
+        std_vect_dim : int
+            Dimension of canonical data format vectors expected by Transformer 
+            backbone model. Used by RNG.
+        
+        Returns:
+        ----------
+        vec : torch.Tensor
+            Unique and deterministically reproducible delimiter token for requested
+            tag and std_vect_dim. 
+
+        """
+        # 1. hash "tag:dim" - 32-byte hex, keep first 8 hex chars - 32-bit int
+        seed = int(hashlib.sha256(f"{tag}:{std_vect_dim}".encode()).hexdigest()[:8], 16)
+        gen = torch.Generator()
+        gen.manual_seed(seed)                       # reproducible, tag-specific
+        vec = torch.randn(std_vect_dim, generator=gen)   # N(0, 1), same scale as normal tokens
+        vec = F.normalize(vec, p=2, dim=0)          # ||vec||_2 = 1  (optional but good)
+
+        return vec
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

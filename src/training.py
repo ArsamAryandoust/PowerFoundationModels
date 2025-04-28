@@ -62,12 +62,10 @@ def _exec_epoch(
     model.train() if mode == 'train' else model.eval() 
 
     # get data
-    dummy_input = taskdata['dummy_input']
-    padding_mask = taskdata['padding_mask']
+    
     
     # make predictions
-    output = model(dummy_input, src_key_padding_mask=padding_mask)
-    print("Output shape:", output.shape)  # (2, 128, 1024)
+    
 
 
     
