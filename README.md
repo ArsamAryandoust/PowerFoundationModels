@@ -1,9 +1,9 @@
-# AI4Climate: Collection of Machine Learning Tasks and Datasets for Tackling Climate Change
+# Power Systems Foundation Models
 
 ## Overview
 
 1. [Getting started](#getting-started)
-2. [Available datasets](#list-of-available-datasets)
+2. [List of available datasets](#list-of-available-datasets)
 3. [Contributions](docs/contributions.md)
 
 
