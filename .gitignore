@@ -8,3 +8,4 @@ venv/
 pyproject.toml
 somenotes
 **/.ipynb_checkpoints
+*.jpg
