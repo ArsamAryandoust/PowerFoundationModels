@@ -6,7 +6,7 @@ Example run:
     $ ./compress_opfdata.sh regular pglib_opf_case14_ieee
 
 or:
-    $ ./compress_opfdata.sh n-1 pglib_opf_case118_ieee
+    $ ./compress_opfdata.sh n-1 pglib_opf_case14_ieee
 
 List of cases:
 
